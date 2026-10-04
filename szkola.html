@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DraftHer - Informator dla Szkół</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* --- DESIGN SYSTEM DRAFTHER --- */
+        :root {
+            --neon-yellow: #E5FF00;
+            --hot-pink: #FF0066;
+            --deep-black: #111111;
+            --white: #FFFFFF;
+            --bg-light: #F4F4F5;
+            --text-muted: #71717A;
+            --card-radius: 24px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; text-decoration: none; }
+
+        body {
+            background-color: var(--bg-light);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        #dotCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* --- IDENTYCZNY NAVBAR --- */
+        .top-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--white); padding: 16px 32px; 
+            border-bottom: 2px solid var(--deep-black); 
+            position: sticky; top: 0; z-index: 2000;
+        }
+        
+        .brand { display: flex; align-items: baseline; gap: 12px; }
+        .brand h1 { font-weight: 900; font-size: 28px; text-transform: uppercase; letter-spacing: -1px; color: var(--deep-black); }
+        .brand span { color: var(--hot-pink); }
+        .brand p { color: var(--text-muted); font-weight: 800; font-size: 13px; text-transform: uppercase;}
+        
+        .nav-menu { display: flex; gap: 16px; }
+         .nav-btn {
+            padding: 12px 24px; border-radius: 99px; border: 2px solid transparent; background: var(--bg-light);
+            cursor: pointer; font-weight: 800; transition: 0.2s; font-size: 14px; color: var(--text-muted); display: flex; align-items: center; justify-content: center;
+        }
+        .nav-btn.active { background: var(--deep-black); color: var(--neon-yellow); border-color: var(--deep-black); }
+        .nav-btn:hover:not(.active) { border-color: var(--hot-pink); color: var(--deep-black); }
+
+        /* --- SEKCJA NAGŁÓWKA INFORMATORA --- */
+        .info-header {
+            padding: 80px 20px 40px;
+            text-align: center;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .info-header h2 {
+            font-size: clamp(32px, 5vw, 60px);
+            font-weight: 900;
+            text-transform: uppercase;
+            line-height: 1;
+            margin-bottom: 20px;
+            color: var(--deep-black);
+        }
+
+        .info-header .badge {
+            background: var(--hot-pink);
+            color: var(--white);
+            padding: 8px 20px;
+            font-weight: 900;
+            text-transform: uppercase;
+            display: inline-block;
+            border: 3px solid var(--deep-black);
+            box-shadow: 4px 4px 0px var(--deep-black);
+            margin-bottom: 20px;
+            transform: rotate(-1deg);
+        }
+
+        /* --- TREŚĆ I UKŁAD --- */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto 100px;
+            padding: 0 20px;
+        }
+
+        .main-card {
+            background: var(--white);
+            border: 4px solid var(--deep-black);
+            border-radius: var(--card-radius);
+            padding: 50px;
+            box-shadow: 12px 12px 0px var(--deep-black);
+            margin-bottom: 50px;
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: 900;
+            text-transform: uppercase;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .section-title::after {
+            content: "";
+            flex-grow: 1;
+            height: 4px;
+            background: currentColor; /* na ciemnej karcie linia przyjmuje kolor tytułu zamiast znikać */
+        }
+
+        .text-content {
+            font-size: 18px;
+            line-height: 1.7;
+            color: var(--deep-black);
+            font-weight: 500;
+        }
+
+        .highlight-box {
+            background: var(--neon-yellow);
+            border: 3px solid var(--deep-black);
+            padding: 30px;
+            margin: 30px 0;
+            border-radius: 16px;
+        }
+
+        /* --- GRID KORZYŚCI --- */
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 40px;
+        }
+
+        .benefit-item {
+            border: 3px solid var(--deep-black);
+            padding: 25px;
+            border-radius: 16px;
+            background: var(--white);
+            transition: 0.2s;
+        }
+
+        .benefit-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 6px 6px 0px var(--hot-pink);
+        }
+
+        .benefit-item h4 {
+            font-weight: 900;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            font-size: 20px;
+        }
+
+        /* --- FOOTER / CTA --- */
+        .cta-footer {
+            text-align: center;
+            background: var(--deep-black);
+            color: var(--white);
+            padding: 60px 20px;
+            border-top: 5px solid var(--hot-pink);
+        }
+
+        .btn-download {
+            background: var(--neon-yellow);
+            color: var(--deep-black);
+            padding: 18px 40px;
+            font-weight: 900;
+            text-transform: uppercase;
+            border: 3px solid var(--white);
+            display: inline-block;
+            margin-top: 20px;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+
+        .btn-download:hover {
+            transform: scale(1.05);
+            background: var(--white);
+        }
+
+        .btn-download { font-size: 16px; }
+        .print-hint { margin-top: 12px; font-size: 13px; color: var(--text-muted); }
+
+        /* Wersja do druku / zapisu jako PDF */
+        @media print {
+            #dotCanvas, .top-nav, .cta-footer { display: none; }
+            body { background: var(--white); }
+            .main-card { box-shadow: none; break-inside: avoid; }
+            .main-card, .highlight-box, .info-header .badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+
+        @media (max-width: 900px) {
+            .top-nav { flex-direction: column; gap: 12px; padding: 12px 16px; }
+            .nav-menu { flex-wrap: wrap; justify-content: center; gap: 8px; }
+            .nav-btn { padding: 8px 14px; font-size: 12px; }
+            .nav-btn svg { width: 20px; height: 20px; }
+            .main-card { padding: 28px 20px; }
+        }
+
+        /* --- STOPKA --- */
+        .site-footer { background: var(--deep-black); color: var(--white); border-top: 5px solid var(--neon-yellow); padding: 70px 40px 34px; }
+        .footer-inner { max-width: 1200px; margin: 0 auto; }
+        .footer-top { display: grid; grid-template-columns: 5fr 7fr; gap: 60px; margin-bottom: 44px; }
+        .footer-brand h2 { font-size: 40px; font-weight: 900; text-transform: uppercase; letter-spacing: -1.5px; line-height: 1; }
+        .footer-brand h2 span { color: var(--hot-pink); }
+        .footer-tagline { font-size: 13px; font-weight: 800; text-transform: uppercase; color: var(--neon-yellow); margin: 8px 0 18px; }
+        .footer-mission { font-size: 15px; font-weight: 500; line-height: 1.6; color: #A1A1AA; margin-bottom: 24px; max-width: 420px; }
+        .footer-mail {
+            display: inline-block; background: var(--neon-yellow); color: var(--deep-black); border: 3px solid var(--deep-black);
+            border-radius: 99px; padding: 12px 22px; font-weight: 900; font-size: 15px; box-shadow: 4px 4px 0px var(--hot-pink); transition: 0.2s;
+        }
+        .footer-mail:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0px var(--hot-pink); }
+        .footer-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+        .footer-cols h3 { font-size: 13px; font-weight: 900; text-transform: uppercase; color: var(--neon-yellow); margin-bottom: 16px; letter-spacing: 0.5px; }
+        .footer-cols a { display: block; color: var(--white); font-size: 15px; font-weight: 700; margin-bottom: 12px; transition: 0.2s; }
+        .footer-cols a:hover { color: var(--hot-pink); transform: translateX(3px); }
+        .footer-safety {
+            border: 2px solid var(--hot-pink); border-radius: 16px; padding: 16px 20px; font-size: 14px; font-weight: 600;
+            line-height: 1.5; color: var(--white); margin-bottom: 30px; background: #1C1C22;
+        }
+        .footer-safety a { color: var(--neon-yellow); font-weight: 900; text-decoration: underline; }
+        .footer-bottom { border-top: 1px solid #333; padding-top: 24px; display: flex; flex-direction: column; gap: 8px; }
+        .footer-bottom p { font-size: 12px; font-weight: 500; line-height: 1.6; color: #A1A1AA; }
+        .footer-bottom b { color: var(--white); }
+        .footer-bottom a { color: #D4D4D8; text-decoration: underline; }
+        .footer-bottom a:hover { color: var(--neon-yellow); }
+
+        @media (max-width: 900px) {
+            .site-footer { padding: 50px 16px 28px; }
+            .footer-top { grid-template-columns: 1fr; gap: 36px; }
+            .footer-cols { grid-template-columns: 1fr 1fr; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="dotCanvas"></canvas>
+
+    <header class="top-nav">
+        <div class="brand">
+            <h1>Draft<span>Her</span></h1>
+            <p>Jej kariera. Jej wybór.</p>
+        </div>
+        <div class="nav-menu">
+            <a href="szkola.html" class="nav-btn active"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M226.53,56.41l-96-32a8,8,0,0,0-5.06,0l-96,32A8,8,0,0,0,24,64v80a8,8,0,0,0,16,0V75.1L73.59,86.29a64,64,0,0,0,20.65,88.05c-18,7.06-33.56,19.83-44.94,37.29a8,8,0,1,0,13.4,8.74C77.77,197.25,101.57,184,128,184s50.23,13.25,65.3,36.37a8,8,0,0,0,13.4-8.74c-11.38-17.46-27-30.23-44.94-37.29a64,64,0,0,0,20.65-88l44.12-14.7a8,8,0,0,0,0-15.18ZM176,120A48,48,0,1,1,89.35,91.55l36.12,12a8,8,0,0,0,5.06,0l36.12-12A47.89,47.89,0,0,1,176,120ZM128,87.57,57.3,64,128,40.43,198.7,64Z"></path></svg>| DLA SZKÓŁ</a>
+            <a href="index.html" class="nav-btn"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M220.17,100,202.86,70a28,28,0,0,0-38.24-10.25,27.69,27.69,0,0,0-9,8.34L138.2,38a28,28,0,0,0-48.48,0A28,28,0,0,0,48.15,74l1.59,2.76A27.67,27.67,0,0,0,38,80.41a28,28,0,0,0-10.24,38.25l40,69.32a87.47,87.47,0,0,0,53.43,41,88.56,88.56,0,0,0,22.92,3,88,88,0,0,0,76.06-132Zm-6.66,62.64A72,72,0,0,1,81.62,180l-40-69.32a12,12,0,0,1,20.78-12L81.63,132a8,8,0,1,0,13.85-8L62,66A12,12,0,1,1,82.78,54L114,108a8,8,0,1,0,13.85-8L103.57,58h0a12,12,0,1,1,20.78-12l33.42,57.9a48,48,0,0,0-5.54,60.6,8,8,0,0,0,13.24-9A32,32,0,0,1,172.78,112a8,8,0,0,0,2.13-10.4L168.23,90A12,12,0,1,1,189,78l17.31,30A71.56,71.56,0,0,1,213.51,162.62ZM184.25,31.71A8,8,0,0,1,194,26a59.62,59.62,0,0,1,36.53,28l.33.57a8,8,0,1,1-13.85,8l-.33-.57a43.67,43.67,0,0,0-26.8-20.5A8,8,0,0,1,184.25,31.71ZM80.89,237a8,8,0,0,1-11.23,1.33A119.56,119.56,0,0,1,40.06,204a8,8,0,0,1,13.86-8,103.67,103.67,0,0,0,25.64,29.72A8,8,0,0,1,80.89,237Z"></path></svg>| STRONA GŁÓWNA</a>
+            <a class="nav-btn" href="mapa.html?view=map"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm88,104a87.62,87.62,0,0,1-6.4,32.94l-44.7-27.49a15.92,15.92,0,0,0-6.24-2.23l-22.82-3.08a16.11,16.11,0,0,0-16,7.86h-8.72l-3.8-7.86a15.91,15.91,0,0,0-11-8.67l-8-1.73L96.14,104h16.71a16.06,16.06,0,0,0,7.73-2l12.25-6.76a16.62,16.62,0,0,0,3-2.14l26.91-24.34A15.93,15.93,0,0,0,166,49.1l-.36-.65A88.11,88.11,0,0,1,216,128ZM143.31,41.34,152,56.9,125.09,81.24,112.85,88H96.14a16,16,0,0,0-13.88,8l-8.73,15.23L63.38,84.19,74.32,58.32a87.87,87.87,0,0,1,69-17ZM40,128a87.53,87.53,0,0,1,8.54-37.8l11.34,30.27a16,16,0,0,0,11.62,10l21.43,4.61L96.74,143a16.09,16.09,0,0,0,14.4,9h1.48l-7.23,16.23a16,16,0,0,0,2.86,17.37l.14.14L128,205.94l-1.94,10A88.11,88.11,0,0,1,40,128Zm102.58,86.78,1.13-5.81a16.09,16.09,0,0,0-4-13.9,1.85,1.85,0,0,1-.14-.14L120,174.74,133.7,144l22.82,3.08,45.72,28.12A88.18,88.18,0,0,1,142.58,214.78Z"></path></svg>| MAPA OFERT</a>
+            <a class="nav-btn" href="mapa.html?view=profile"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M168,104H88a40,40,0,0,0-40,40v8a40,40,0,0,0,40,40h80a40,40,0,0,0,40-40v-8A40,40,0,0,0,168,104Zm24,48a24,24,0,0,1-24,24H88a24,24,0,0,1-24-24v-8a24,24,0,0,1,24-24h80a24,24,0,0,1,24,24ZM208,40a32.06,32.06,0,0,0-31,24H79a32,32,0,0,0-63,8v80a72.08,72.08,0,0,0,72,72h80a72.08,72.08,0,0,0,72-72V72A32,32,0,0,0,208,40Zm16,112a56.06,56.06,0,0,1-56,56H88a56.06,56.06,0,0,1-56-56V72a16,16,0,0,1,32,0,8,8,0,0,0,8,8H184a8,8,0,0,0,8-8,16,16,0,0,1,32,0Zm-120-4a12,12,0,1,1-12-12A12,12,0,0,1,104,148Zm72,0a12,12,0,1,1-12-12A12,12,0,0,1,176,148Z"></path></svg>| TWÓJ PROFIL</a>
+        </div>
+    </header>
+
+    <section class="info-header">
+        <div class="badge">Oferta Współpracy 2026/27</div>
+        <h2>Każda dziewczyna może zostać, kim chce.</h2>
+    </section>
+
+    <main class="container">
+        <div class="main-card">
+            <div class="section-title">O projekcie</div>
+            <div class="text-content">
+                <p>Dziewczyny wciąż rzadziej wybierają kierunki techniczne – nie z braku talentu, ale z braku wzorców i przez stereotyp „to nie jest zawód dla dziewczyn”. W Unii Europejskiej mniej niż 1 na 5 specjalistów IT to kobieta (Eurostat). DraftHer to platforma <strong>Job Shadowingu</strong>: jednodniowych wizyt, podczas których uczennica spędza dzień z <strong>mentorką</strong> – kobietą, która na co dzień pracuje w danym zawodzie.</p>
+
+                <div class="highlight-box">
+                    <strong>Bezpieczeństwo przede wszystkim:</strong> każda firma jest weryfikowana i przestrzega Kodeksu Bezpiecznej Wizyty, każda wizyta ma przypisaną mentorkę, a zapis wymaga zgody rodzica lub opiekuna prawnego.
+                </div>
+
+                <div class="section-title">Dlaczego warto dołączyć?</div>
+                <div class="benefits-grid">
+                    <div class="benefit-item">
+                        <h4>🪞 Wzorce</h4>
+                        <p>Uczennice poznają kobiety, które już pracują jako programistki, mechaniczki czy inżynierki. Łatwiej uwierzyć, że „mogę”, kiedy widzi się kogoś podobnego do siebie.</p>
+                    </div>
+                    <div class="benefit-item">
+                        <h4>🎯 Świadomy wybór</h4>
+                        <p>Zamiast wybierać szkołę i studia „w ciemno” albo pod presją stereotypów, uczennica sprawdza zawód w praktyce i decyduje na podstawie własnego doświadczenia.</p>
+                    </div>
+                    <div class="benefit-item">
+                        <h4>📈 Pewność siebie</h4>
+                        <p>Questy, odznaki i poziomy nagradzają odwagę wejścia do nowych branż. Zdobyte doświadczenie uczennica może pokazać w CV i na rekrutacji.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-card" style="background: var(--deep-black); color: var(--white);">
+            <div class="section-title" style="color: var(--neon-yellow);">Jak to działa?</div>
+            <div class="text-content" style="color: var(--white);">
+                <ol style="margin-left: 20px;">
+                    <li><strong>Rejestracja szkoły:</strong> Szkoła zakłada bezpłatne konto i wskazuje opiekuna programu, np. doradcę zawodowego.</li>
+                    <li><strong>Dostęp dla uczennic:</strong> Uczennice dostają dostęp do mapy ofert – z filtrem „Przełam schemat” dla branż, w których wciąż pracuje mało kobiet.</li>
+                    <li><strong>Zgoda i zapis:</strong> Uczennica wybiera wizytę (może przyjść z koleżanką), a rodzic lub opiekun potwierdza zgodę.</li>
+                    <li><strong>Dzień z mentorką:</strong> Na miejscu uczennica wykonuje questy, a po wizycie zdobywa XP i odznaki widoczne w profilu.</li>
+                </ol>
+            </div>
+        </div>
+    </main>
+
+    <footer class="cta-footer">
+        <h3>Pobierz pełną broszurę PDF</h3>
+        <p>Wszystkie szczegóły techniczne i prawne w jednym miejscu.</p>
+        <button type="button" class="btn-download" onclick="window.print()">Pobierz Informator (.PDF)</button>
+        <p class="print-hint">Otworzy się okno drukowania – wybierz „Zapisz jako PDF”.</p>
+    </footer>
+
+    <!-- STOPKA -->
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <div class="footer-top">
+                <div class="footer-brand">
+                    <h2>Draft<span>Her</span></h2>
+                    <p class="footer-tagline">Jej kariera. Jej wybór.</p>
+                    <p class="footer-mission">Krótkie doświadczenia zawodowe z mentorką u boku – dla uczennic, studentek i młodych kobiet, które chcą sprawdzić swoją ścieżkę bez presji i bez gotowego CV.</p>
+                    <a href="mailto:kontakt@drafther.pl" class="footer-mail">✉️ kontakt@drafther.pl</a>
+                </div>
+                <nav class="footer-cols" aria-label="Stopka">
+                    <div>
+                        <h3>Dla uczennic</h3>
+                        <a href="mapa.html?view=map">Mapa ofert</a>
+                        <a href="mapa.html?view=profile">Profil, questy i odznaki</a>
+                        <a href="index.html#mentorki">Mentorki</a>
+                    </div>
+                    <div>
+                        <h3>Dla organizacji</h3>
+                        <a href="company-panel.html">Dodaj ofertę</a>
+                        <a href="pracodawca.html">Panel mentorki</a>
+                        <a href="szkola.html">Dla szkół</a>
+                    </div>
+                    <div>
+                        <h3>Projekt</h3>
+                        <a href="index.html#potrzeba">Potrzeba i hipoteza</a>
+                        <a href="index.html#bezpieczenstwo">Bezpieczeństwo i zgłoszenia</a>
+                        <a href="index.html#faq">Pytania przed startem</a>
+                    </div>
+                </nav>
+            </div>
+
+            <div class="footer-safety">
+                🛡️ Coś jest nie tak podczas doświadczenia? Możesz przerwać udział w każdej chwili, bez tłumaczenia się, i napisać do nas: <a href="mailto:kontakt@drafther.pl?subject=Zg%C5%82oszenie%20sytuacji">kontakt@drafther.pl</a>
+            </div>
+
+            <div class="footer-bottom">
+                <p>© 2026 DraftHer · Projekt koncepcyjny na HackYeah – zadanie <b>ImpactHer: Technology for Real Change</b>.</p>
+                <p>Oferty, firmy, mentorki, zdjęcia i dane kontaktowe na stronie są przykładowe i nie przedstawiają rzeczywistej współpracy.</p>
+                <p>Wykorzystane zasoby: <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a> · mapy © Esri, © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · ikony <a href="https://phosphoricons.com" target="_blank" rel="noopener">Phosphor Icons</a> · font Inter (Google Fonts) · dane: Eurostat. Przy tworzeniu projektu korzystano z narzędzi AI.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Skrypt kropek (identyczny jak wcześniej, dla spójności)
+        const canvas = document.getElementById('dotCanvas');
+        const ctx = canvas.getContext('2d');
+        let dots = [];
+        const mouse = { x: undefined, y: undefined, radius: 140 };
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            initDots();
+        }
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        // Reset pozycji myszy po wyjechaniu z okna (relatedTarget === null tylko przy opuszczeniu okna)
+        document.addEventListener('mouseout', (e) => {
+            if (!e.relatedTarget) {
+                mouse.x = undefined;
+                mouse.y = undefined;
+            }
+        });
+
+        window.addEventListener('resize', resize);
+
+        class Dot {
+            constructor(x, y) {
+                this.x = x; this.y = y;
+                this.baseX = x; this.baseY = y;
+                this.size = 2.5;
+                this.density = (Math.random() * 15) + 5;
+                this.distanceFromMouse = Infinity;
+            }
+            draw() {
+                let opacity = 0;
+                if (this.distanceFromMouse < mouse.radius) {
+                    opacity = 1 - (this.distanceFromMouse / mouse.radius);
+                }
+                const hue = 336; // Hot Pink
+                const saturation = opacity * 100;
+                const lightness = 85 - (opacity * 35);
+                ctx.fillStyle = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size + (opacity * 1.5), 0, Math.PI * 2);
+                ctx.fill();
+            }
+            update() {
+                if (mouse.x === undefined) {
+                    this.distanceFromMouse = Infinity;
+                } else {
+                    let dx = mouse.x - this.x;
+                    let dy = mouse.y - this.y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+                    this.distanceFromMouse = distance;
+                    if (distance < mouse.radius) {
+                        let force = (mouse.radius - distance) / mouse.radius;
+                        this.x -= (dx / distance) * force * this.density;
+                        this.y -= (dy / distance) * force * this.density;
+                    }
+                }
+                this.x -= (this.x - this.baseX) / 10;
+                this.y -= (this.y - this.baseY) / 10;
+            }
+        }
+
+        function initDots() {
+            dots = [];
+            const spacing = 35;
+            for (let y = 0; y < canvas.height; y += spacing) {
+                for (let x = 0; x < canvas.width; x += spacing) {
+                    dots.push(new Dot(x, y));
+                }
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            dots.forEach(dot => { dot.update(); dot.draw(); });
+            requestAnimationFrame(animate);
+        }
+
+        resize();
+        animate();
+    </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+.vercel
+.env*
+
+# Stare wersje robocze – nie są częścią portalu
+index444.html
+ind2 copy.html
+placehold
+hahaha.json

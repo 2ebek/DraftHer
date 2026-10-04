@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DraftHer - Mapa Ofert</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        /* --- PALETA KOLORÓW DRAFTHER --- */
+        :root {
+            --neon-yellow: #E5FF00;
+            --hot-pink: #FF0066;
+            --deep-black: #111111;
+            --white: #FFFFFF;
+            --bg-light: #F4F4F5;
+            --text-muted: #71717A;
+            --border-light: #E4E4E7;
+            --card-radius: 24px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body, html { height: 100%; background-color: var(--bg-light); color: var(--deep-black); overflow: hidden; }
+
+        .app-container { display: flex; flex-direction: column; height: 100vh; width: 100vw; position: relative; }
+
+        /* --- 1. GÓRNY PASEK NAWIGACJI (HEADER) --- */
+        .top-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--white); padding: 16px 32px; border-bottom: 2px solid var(--deep-black); z-index: 2000;
+        }
+        .brand { display: flex; align-items: baseline; gap: 12px; }
+        .brand h1 { font-weight: 900; font-size: 28px; text-transform: uppercase; letter-spacing: -1px; }
+        .brand span { color: var(--hot-pink); }
+        .brand p { color: var(--text-muted); font-weight: 800; font-size: 13px; text-transform: uppercase;}
+        
+        .nav-menu { display: flex; gap: 16px; }
+        .nav-btn {
+            padding: 12px 24px; border-radius: 99px; border: 2px solid transparent; background: var(--bg-light);
+            cursor: pointer; font-weight: 800; transition: 0.2s; font-size: 14px; color: var(--text-muted);
+            text-decoration: none; /* Dodane dla linków a */
+            display: flex; align-items: center; justify-content: center;
+        }
+        .nav-btn.active { background: var(--deep-black); color: var(--neon-yellow); border-color: var(--deep-black); }
+        .nav-btn:hover:not(.active) { border-color: var(--hot-pink); color: var(--deep-black); }
+
+        /* --- SYSTEM WIDOKÓW --- */
+        .main-content { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
+        .view { height: 100%; width: 100%; display: none; overflow-y: auto; }
+        .view.active { display: flex; }
+
+        /* --- 2. WIDOK MAPY Z LEWYM PANELEM --- */
+        #view-map { flex-direction: row; }
+        
+        /* LEWY PANEL (Feed Ofert) */
+        .left-panel {
+            width: 420px; background: var(--bg-light); display: flex; flex-direction: column;
+            border-right: 2px solid var(--deep-black); z-index: 1000; flex-shrink: 0;
+        }
+        
+        .panel-header { background: var(--white); padding: 24px; border-bottom: 2px solid var(--deep-black); }
+        
+        .top-search {
+            background: var(--white); padding: 12px 20px; border-radius: 12px; margin-bottom: 16px;
+            display: flex; align-items: center; border: 2px solid var(--deep-black); box-shadow: 4px 4px 0px var(--deep-black);
+            transition: 0.2s;
+        }
+        .top-search:focus-within { box-shadow: 6px 6px 0px var(--hot-pink); transform: translate(-2px, -2px); }
+        .top-search input { border: none; outline: none; width: 100%; padding: 4px 8px; font-size: 15px; font-weight: 600; }
+
+        .map-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+        .filter-pill {
+            padding: 8px 14px; background: var(--white); border: 2px solid var(--deep-black);
+            border-radius: 99px; font-weight: 800; font-size: 11px; text-transform: uppercase;
+            cursor: pointer; transition: 0.2s; box-shadow: 2px 2px 0px var(--deep-black); color: var(--deep-black);
+        }
+        .filter-pill:hover:not(.active) { transform: translate(-1px, -1px); box-shadow: 3px 3px 0px var(--deep-black); }
+        .filter-pill.active { background: var(--neon-yellow); transform: translate(2px, 2px); box-shadow: 0px 0px 0px var(--deep-black); }
+
+        /* Filtry potrzeb: format i dostępność */
+        .needs-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 2px dashed var(--border-light); }
+        .needs-select {
+            padding: 7px 10px; border: 2px solid var(--deep-black); border-radius: 99px; font-size: 11px; font-weight: 800;
+            text-transform: uppercase; background: var(--white); cursor: pointer; color: var(--deep-black);
+        }
+        .need-toggle {
+            display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 2px dashed var(--deep-black); border-radius: 99px;
+            font-size: 11px; font-weight: 800; text-transform: uppercase; cursor: pointer; transition: 0.2s; background: var(--white);
+        }
+        .need-toggle input { accent-color: var(--hot-pink); width: 14px; height: 14px; cursor: pointer; }
+        .need-toggle:has(input:checked) { background: var(--neon-yellow); border-style: solid; }
+
+        /* Etykiety oferty */
+        .offer-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+        .offer-tag { font-size: 10px; font-weight: 800; padding: 3px 7px; border-radius: 6px; background: var(--bg-light); border: 1px solid var(--border-light); white-space: nowrap; }
+        .offer-tag.task { background: #FFE4EE; border-color: var(--hot-pink); }
+        .offer-tag.shadowing { background: #EEF2FF; border-color: #A5B4FC; }
+        .offer-tag.noexp { background: #DCFCE7; border-color: #22C55E; }
+        .offer-tag.icon { padding: 3px 5px; }
+        .popup-tags { margin-bottom: 12px; }
+        .detail-tags { margin-bottom: 16px; }
+        .detail-tags .offer-tag { font-size: 12px; padding: 5px 10px; }
+        .needs-field { margin-bottom: 20px; }
+        .needs-field label { display: block; font-size: 12px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+        .needs-field textarea {
+            width: 100%; min-height: 64px; resize: vertical; padding: 10px; border-radius: 10px; border: 2px solid var(--border-light);
+            background: var(--bg-light); font-size: 13px; font-weight: 600; outline: none;
+        }
+        .needs-field textarea:focus { border-color: var(--hot-pink); background: var(--white); }
+
+        /* Lista Ofert */
+        .offers-list { flex-grow: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+        
+        .mini-card {
+            background: var(--white); border: 2px solid var(--deep-black); border-radius: 16px;
+            padding: 16px; box-shadow: 4px 4px 0px var(--deep-black); cursor: pointer; transition: 0.2s;
+            display: flex; gap: 16px; align-items: center;
+        }
+        .mini-card:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0px var(--hot-pink); border-color: var(--hot-pink); }
+        .mc-icon { width: 56px; height: 56px; border-radius: 12px; border: 2px solid var(--deep-black); overflow: hidden; flex-shrink: 0; background: var(--bg-light); }
+        .mc-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .mc-info { flex-grow: 1; }
+        .mc-info h4 { font-size: 15px; font-weight: 900; margin-bottom: 4px; line-height: 1.2; }
+        .mc-info p { font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;}
+        
+        /* Kontener Mapy */
+        #map-container { flex-grow: 1; position: relative; }
+        #map { height: 100%; width: 100%; position: absolute; top:0; left:0; z-index: 1; }
+
+        /* --- STYLIZACJA MAPY (POP-UP I ZNACZNIKI) --- */
+        .leaflet-popup-content-wrapper { border-radius: var(--card-radius); padding: 0; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2); border: 2px solid var(--deep-black); }
+        .leaflet-popup-content { margin: 0; width: 280px !important; }
+        .company-card { background: var(--white); }
+        .company-header { background: var(--neon-yellow); padding: 20px; display: flex; align-items: center; gap: 16px; border-bottom: 2px solid var(--deep-black); }
+        .company-icon-wrap { width: 48px; height: 48px; background: var(--white); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; border: 2px solid var(--deep-black); box-shadow: 2px 2px 0px var(--deep-black); overflow: hidden; }
+        .company-icon-img { width: 100%; height: 100%; object-fit: cover; }
+        .company-title h4 { font-size: 16px; font-weight: 900; line-height: 1.2; }
+        .company-tag { font-size: 10px; font-weight: 800; background: var(--white); padding: 4px 8px; border-radius: 6px; display: inline-block; margin-top: 6px; border: 1px solid var(--deep-black); }
+        .company-info { padding: 20px; }
+        
+        .seats-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--bg-light); color: var(--deep-black); padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 900; border: 1px solid var(--border-light); margin-bottom: 12px; }
+        .seats-badge.low { background: var(--hot-pink); color: var(--white); border-color: var(--hot-pink); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 0, 102, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 0, 102, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 0, 102, 0); } }
+
+        .company-info p { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5; font-weight: 600; }
+        .action-buttons { display: flex; flex-direction: column; gap: 8px; }
+        .btn-primary { width: 100%; padding: 12px; background: var(--hot-pink); color: var(--white); border: none; border-radius: 12px; font-weight: 800; font-size: 14px; cursor: pointer; transition: 0.2s; }
+        .btn-primary:hover:not(:disabled) { background: #e6005c; transform: translateY(-2px); }
+        .btn-primary:disabled { background: var(--deep-black); color: var(--neon-yellow); cursor: default; }
+        .btn-secondary { width: 100%; padding: 12px; background: transparent; color: var(--deep-black); border: 2px solid var(--deep-black); border-radius: 12px; font-weight: 800; font-size: 14px; cursor: pointer; transition: 0.2s; }
+        .btn-secondary:hover { background: var(--border-light); }
+
+        /* Leaflet pozycjonuje znacznik przez transform na .custom-marker, dlatego
+           wygląd i animacja hover są na wewnętrznym .marker-pin (inaczej znacznik "ucieka" przy najechaniu) */
+        .custom-marker { background: none; border: none; }
+        .marker-pin { width: 100%; height: 100%; background: var(--deep-black); border: 3px solid var(--neon-yellow); border-radius: 50%; box-shadow: 0 8px 16px rgba(0,0,0,0.2); overflow: hidden; transition: transform 0.2s, border-color 0.2s; transform-origin: bottom center; }
+        .marker-pin img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .custom-marker:hover .marker-pin { transform: scale(1.15) translateY(-5px); border-color: var(--hot-pink); }
+
+        /* --- 3. WIDOK PROFILU --- */
+        #view-profile { display: none; width: 100%; }
+        #view-profile.active { display: block; }
+        .container-padding { padding: 40px 60px; max-width: 1400px; margin: 0 auto; width: 100%;}
+        .section-title { font-size: 32px; font-weight: 900; margin-bottom: 24px; text-transform: uppercase; letter-spacing: -1px;}
+        .upcoming-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-bottom: 50px; }
+        .upcoming-card { background: var(--white); border: 2px solid var(--deep-black); border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 16px; box-shadow: 4px 4px 0px var(--deep-black); }
+        .uc-icon { font-size: 32px; background: var(--bg-light); width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px; border: 1px solid var(--border-light); overflow: hidden;}
+        .uc-info h4 { font-size: 16px; font-weight: 900; }
+        .uc-info p { font-size: 13px; color: var(--hot-pink); font-weight: 800; margin-top: 4px;}
+
+        /* --- 4. WIDOK SZCZEGÓŁÓW OFERTY --- */
+        #view-details { display: none; width: 100%; }
+        #view-details.active { display: block; }
+        .back-btn { background: transparent; border: none; font-size: 16px; font-weight: 800; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 8px; margin-bottom: 24px; transition: 0.2s; }
+        .back-btn:hover { color: var(--deep-black); }
+        
+        .detail-banner { background: var(--neon-yellow); border: 4px solid var(--deep-black); border-radius: 32px; padding: 50px; display: flex; align-items: center; gap: 30px; box-shadow: 8px 8px 0px var(--deep-black); margin-bottom: 40px; }
+        .detail-banner-icon { font-size: 70px; background: var(--white); width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; border-radius: 24px; border: 4px solid var(--deep-black); overflow: hidden; }
+        .detail-banner-text h1 { font-size: 48px; font-weight: 900; line-height: 1; margin-bottom: 10px; letter-spacing: -2px; }
+        .detail-banner-text h3 { font-size: 20px; font-weight: 800; color: var(--deep-black); opacity: 0.7; text-transform: uppercase; }
+
+        .detail-layout { display: grid; grid-template-columns: 7fr 3fr; gap: 40px; align-items: start; }
+        .detail-left section { background: var(--white); border: 2px solid var(--border-light); border-radius: 24px; padding: 40px; margin-bottom: 24px; }
+        .detail-left h2 { font-size: 24px; font-weight: 900; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .detail-left p { font-size: 16px; color: var(--text-muted); line-height: 1.7; font-weight: 500; }
+        
+        .schedule-list { list-style: none; }
+        .schedule-list li { display: flex; gap: 20px; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px dashed var(--border-light); }
+        .schedule-list li:last-child { border: none; margin: 0; padding: 0; }
+        .schedule-time { font-weight: 900; color: var(--hot-pink); min-width: 70px; }
+        .schedule-desc { font-weight: 600; color: var(--deep-black); }
+
+        .detail-right { position: sticky; top: 40px; }
+        .ticket-card { background: var(--white); border: 3px solid var(--deep-black); border-radius: 24px; padding: 32px; box-shadow: 8px 8px 0px var(--deep-black); }
+        .ticket-header { border-bottom: 2px solid var(--border-light); padding-bottom: 20px; margin-bottom: 20px; }
+        .ticket-header p { font-size: 14px; color: var(--text-muted); font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
+        .ticket-header h3 { font-size: 20px; font-weight: 900; color: var(--hot-pink); margin-bottom: 12px;}
+        
+        .checkbox-wrapper { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+        .checkbox-wrapper:last-of-type { margin-bottom: 24px; }
+        .mentor-tag { font-size: 12px; font-weight: 800; color: var(--deep-black); margin: -4px 0 10px; }
+        .mentor-section { border-color: var(--hot-pink) !important; }
+        .safety-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .safety-list li { font-size: 15px; font-weight: 600; color: var(--deep-black); line-height: 1.5; }
+        .demo-note { font-size: 11px; font-weight: 600; color: var(--text-muted); padding: 10px 24px; border-top: 1px solid var(--border-light); background: var(--white); }
+        .checkbox-wrapper input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--hot-pink); cursor: pointer; margin-top: 2px; }
+        .checkbox-wrapper label { font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; line-height: 1.4; }
+        .checkbox-wrapper label a { color: var(--deep-black); font-weight: 800; text-decoration: underline; }
+        .btn-ticket { width: 100%; padding: 20px; font-size: 18px; border-radius: 16px; }
+    
+        .badge-card {
+    background: var(--white);
+    border: 3px solid var(--deep-black);
+    border-radius: 20px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 6px 6px 0px var(--neon-yellow);
+    transition: 0.3s;
+}
+
+.badge-card:hover {
+    transform: rotate(-2deg) scale(1.05);
+    box-shadow: 8px 8px 0px var(--hot-pink);
+}
+
+.badge-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.badge-name {
+    font-weight: 900;
+    text-transform: uppercase;
+    font-size: 13px;
+    display: block;
+}
+
+.badge-locked {
+    filter: grayscale(1);
+    opacity: 0.5;
+    box-shadow: 4px 4px 0px var(--border-light);
+}
+.badge-progress-container {
+    width: 100%;
+    height: 12px;
+    background: var(--bg-light);
+    border: 2px solid var(--deep-black);
+    border-radius: 99px;
+    margin-top: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.badge-progress-bar {
+    height: 100%;
+    background: var(--neon-yellow);
+    border-right: 2px solid var(--deep-black);
+    transition: width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.badge-count {
+    font-size: 10px;
+    font-weight: 900;
+    margin-top: 4px;
+    display: block;
+    color: var(--text-muted);
+}
+
+        /* --- QUESTY I POZIOM GRACZA --- */
+        .player-card {
+            background: var(--deep-black); color: var(--white); border: 3px solid var(--deep-black); border-radius: 20px;
+            padding: 24px; display: flex; align-items: center; gap: 24px; box-shadow: 6px 6px 0px var(--hot-pink); margin-bottom: 20px;
+        }
+        .player-level {
+            background: var(--neon-yellow); color: var(--deep-black); border-radius: 16px; width: 84px; height: 84px; flex-shrink: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 900; transform: rotate(-3deg);
+        }
+        .player-level small { font-size: 10px; text-transform: uppercase; }
+        .player-level strong { font-size: 36px; line-height: 1; }
+        .player-info { flex-grow: 1; }
+        .player-info h3 { font-size: 22px; font-weight: 900; text-transform: uppercase; }
+        .player-info p { font-size: 13px; font-weight: 700; color: #A1A1AA; margin-top: 4px; }
+        .player-card .badge-progress-container { border-color: var(--white); background: #27272A; height: 14px; }
+
+        .quest-intro { font-size: 14px; font-weight: 600; color: var(--text-muted); margin: -12px 0 20px; }
+        .quest-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; margin-bottom: 50px; }
+        .quest-card { background: var(--white); border: 2px solid var(--deep-black); border-radius: 16px; padding: 20px; box-shadow: 4px 4px 0px var(--deep-black); transition: 0.2s; }
+        .quest-card.done { box-shadow: 6px 6px 0px var(--neon-yellow); }
+        .quest-card.starter { border-width: 3px; box-shadow: 6px 6px 0px var(--hot-pink); }
+        .quest-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+        .quest-head .uc-icon { width: 48px; height: 48px; font-size: 24px; flex-shrink: 0; }
+        .quest-head h4 { font-size: 16px; font-weight: 900; line-height: 1.2; }
+        .quest-head p { font-size: 12px; font-weight: 800; color: var(--hot-pink); margin-top: 2px; }
+        .quest-xp { margin-left: auto; background: var(--neon-yellow); border: 2px solid var(--deep-black); border-radius: 8px; padding: 4px 8px; font-size: 11px; font-weight: 900; white-space: nowrap; }
+        .quest-tasks { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+        .quest-task { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 10px; background: var(--bg-light); border: 1px solid var(--border-light); font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .quest-task:hover { border-color: var(--deep-black); }
+        .quest-task input { width: 18px; height: 18px; accent-color: var(--hot-pink); cursor: pointer; flex-shrink: 0; margin-top: 1px; }
+        .quest-task.checked { color: var(--text-muted); text-decoration: line-through; }
+        .quest-task.auto { cursor: default; }
+        .quest-task.auto:hover { border-color: var(--border-light); }
+        .quest-task.locked { opacity: 0.45; }
+        .quest-task.current { border: 2px solid var(--hot-pink); background: var(--white); }
+        .quest-state { width: 18px; text-align: center; flex-shrink: 0; }
+        .quest-footer { font-size: 11px; font-weight: 900; color: var(--text-muted); text-transform: uppercase; margin-top: 6px; display: block; }
+
+        .merit-card { background: var(--white); border: 2px solid var(--deep-black); border-radius: 16px; padding: 20px; box-shadow: 6px 6px 0px var(--hot-pink); }
+        .merit-empty { grid-column: 1 / -1; padding: 20px; border: 2px dashed var(--border-light); border-radius: 16px; text-align: center; color: var(--text-muted); font-weight: 600; }
+        .merit-attended { font-size: 12px; font-weight: 900; color: #15803D; background: #DCFCE7; border-radius: 8px; padding: 6px 10px; display: inline-block; margin-bottom: 12px; }
+        .merit-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .merit-chip { background: var(--neon-yellow); border: 2px solid var(--deep-black); border-radius: 99px; padding: 6px 12px; font-size: 12px; font-weight: 900; }
+        .merit-quote { margin-top: 14px; background: var(--bg-light); border-left: 4px solid var(--hot-pink); border-radius: 8px; padding: 12px 14px; font-size: 14px; font-weight: 600; font-style: italic; line-height: 1.5; }
+        .merit-quote cite { display: block; margin-top: 6px; font-size: 11px; font-weight: 800; font-style: normal; color: var(--text-muted); text-transform: uppercase; }
+
+        .toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translate(-50%, calc(100% + 40px)); visibility: hidden; background: var(--neon-yellow); color: var(--deep-black);
+            border: 3px solid var(--deep-black); box-shadow: 4px 4px 0px var(--deep-black); border-radius: 14px; padding: 14px 22px;
+            font-weight: 900; font-size: 15px; z-index: 5000; transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275), visibility 0.35s; pointer-events: none;
+        }
+        .toast.show { transform: translate(-50%, 0); visibility: visible; }
+
+        /* --- WERSJA MOBILNA --- */
+        @media (max-width: 900px) {
+            .top-nav { flex-direction: column; gap: 12px; padding: 12px 16px; }
+            .nav-menu { flex-wrap: wrap; justify-content: center; gap: 8px; }
+            .nav-btn { padding: 8px 14px; font-size: 12px; }
+            .nav-btn svg { width: 20px; height: 20px; }
+
+            /* Lista ofert nad mapą zamiast obok niej */
+            #view-map { flex-direction: column; }
+            .left-panel { width: 100%; height: 50%; border-right: none; border-bottom: 2px solid var(--deep-black); }
+            .panel-header { padding: 16px; }
+            .offers-list { padding: 16px; }
+            .mc-info p { max-width: none; }
+            #map-container { min-height: 50%; }
+
+            .container-padding { padding: 24px 16px; }
+            .detail-banner { flex-direction: column; text-align: center; padding: 28px 20px; }
+            .detail-banner-text h1 { font-size: 32px; }
+            .detail-layout { grid-template-columns: 1fr; }
+            .detail-left section { padding: 24px; }
+            .detail-right { position: static; }
+            .quest-grid { grid-template-columns: 1fr; }
+            .player-card { gap: 16px; padding: 18px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="app-container">
+    <header class="top-nav">
+        <div class="brand">
+            <h1>Draft<span>Her</span></h1>
+            <p>Jej kariera. Jej wybór.</p>
+        </div>
+        <div class="nav-menu">
+            <a href="szkola.html" class="nav-btn"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M226.53,56.41l-96-32a8,8,0,0,0-5.06,0l-96,32A8,8,0,0,0,24,64v80a8,8,0,0,0,16,0V75.1L73.59,86.29a64,64,0,0,0,20.65,88.05c-18,7.06-33.56,19.83-44.94,37.29a8,8,0,1,0,13.4,8.74C77.77,197.25,101.57,184,128,184s50.23,13.25,65.3,36.37a8,8,0,0,0,13.4-8.74c-11.38-17.46-27-30.23-44.94-37.29a64,64,0,0,0,20.65-88l44.12-14.7a8,8,0,0,0,0-15.18ZM176,120A48,48,0,1,1,89.35,91.55l36.12,12a8,8,0,0,0,5.06,0l36.12-12A47.89,47.89,0,0,1,176,120ZM128,87.57,57.3,64,128,40.43,198.7,64Z"></path></svg>| DLA SZKÓŁ</a>
+            <a href="index.html" class="nav-btn"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M220.17,100,202.86,70a28,28,0,0,0-38.24-10.25,27.69,27.69,0,0,0-9,8.34L138.2,38a28,28,0,0,0-48.48,0A28,28,0,0,0,48.15,74l1.59,2.76A27.67,27.67,0,0,0,38,80.41a28,28,0,0,0-10.24,38.25l40,69.32a87.47,87.47,0,0,0,53.43,41,88.56,88.56,0,0,0,22.92,3,88,88,0,0,0,76.06-132Zm-6.66,62.64A72,72,0,0,1,81.62,180l-40-69.32a12,12,0,0,1,20.78-12L81.63,132a8,8,0,1,0,13.85-8L62,66A12,12,0,1,1,82.78,54L114,108a8,8,0,1,0,13.85-8L103.57,58h0a12,12,0,1,1,20.78-12l33.42,57.9a48,48,0,0,0-5.54,60.6,8,8,0,0,0,13.24-9A32,32,0,0,1,172.78,112a8,8,0,0,0,2.13-10.4L168.23,90A12,12,0,1,1,189,78l17.31,30A71.56,71.56,0,0,1,213.51,162.62ZM184.25,31.71A8,8,0,0,1,194,26a59.62,59.62,0,0,1,36.53,28l.33.57a8,8,0,1,1-13.85,8l-.33-.57a43.67,43.67,0,0,0-26.8-20.5A8,8,0,0,1,184.25,31.71ZM80.89,237a8,8,0,0,1-11.23,1.33A119.56,119.56,0,0,1,40.06,204a8,8,0,0,1,13.86-8,103.67,103.67,0,0,0,25.64,29.72A8,8,0,0,1,80.89,237Z"></path></svg>| STRONA GŁÓWNA</a>
+            <button class="nav-btn active" onclick="switchView('map', this)"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm88,104a87.62,87.62,0,0,1-6.4,32.94l-44.7-27.49a15.92,15.92,0,0,0-6.24-2.23l-22.82-3.08a16.11,16.11,0,0,0-16,7.86h-8.72l-3.8-7.86a15.91,15.91,0,0,0-11-8.67l-8-1.73L96.14,104h16.71a16.06,16.06,0,0,0,7.73-2l12.25-6.76a16.62,16.62,0,0,0,3-2.14l26.91-24.34A15.93,15.93,0,0,0,166,49.1l-.36-.65A88.11,88.11,0,0,1,216,128ZM143.31,41.34,152,56.9,125.09,81.24,112.85,88H96.14a16,16,0,0,0-13.88,8l-8.73,15.23L63.38,84.19,74.32,58.32a87.87,87.87,0,0,1,69-17ZM40,128a87.53,87.53,0,0,1,8.54-37.8l11.34,30.27a16,16,0,0,0,11.62,10l21.43,4.61L96.74,143a16.09,16.09,0,0,0,14.4,9h1.48l-7.23,16.23a16,16,0,0,0,2.86,17.37l.14.14L128,205.94l-1.94,10A88.11,88.11,0,0,1,40,128Zm102.58,86.78,1.13-5.81a16.09,16.09,0,0,0-4-13.9,1.85,1.85,0,0,1-.14-.14L120,174.74,133.7,144l22.82,3.08,45.72,28.12A88.18,88.18,0,0,1,142.58,214.78Z"></path></svg>| MAPA OFERT</button>
+            <button class="nav-btn" onclick="switchView('profile', this)"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M168,104H88a40,40,0,0,0-40,40v8a40,40,0,0,0,40,40h80a40,40,0,0,0,40-40v-8A40,40,0,0,0,168,104Zm24,48a24,24,0,0,1-24,24H88a24,24,0,0,1-24-24v-8a24,24,0,0,1,24-24h80a24,24,0,0,1,24,24ZM208,40a32.06,32.06,0,0,0-31,24H79a32,32,0,0,0-63,8v80a72.08,72.08,0,0,0,72,72h80a72.08,72.08,0,0,0,72-72V72A32,32,0,0,0,208,40Zm16,112a56.06,56.06,0,0,1-56,56H88a56.06,56.06,0,0,1-56-56V72a16,16,0,0,1,32,0,8,8,0,0,0,8,8H184a8,8,0,0,0,8-8,16,16,0,0,1,32,0Zm-120-4a12,12,0,1,1-12-12A12,12,0,0,1,104,148Zm72,0a12,12,0,1,1-12-12A12,12,0,0,1,176,148Z"></path></svg>| TWÓJ PROFIL</button>
+        </div>
+    </header>
+
+    <div class="main-content">
+        
+        <div id="view-map" class="view active">
+            <div class="left-panel">
+                <div class="panel-header">
+                    <div class="top-search">
+                        <span style="font-size: 18px; opacity: 0.5; margin-right: 8px;">🔍</span>
+                        <input type="text" id="main-search-input" placeholder="Szukaj miasta, branży, firmy...">
+                    </div>
+                    <div class="map-filters">
+                        <button class="filter-pill active" data-category="all">🌍 Wszystkie</button>
+                        <button class="filter-pill" data-category="underrep" title="Branże, w których wciąż pracuje mało kobiet">⚡ Przełam schemat</button>
+                        <button class="filter-pill" data-category="tech">💻 Tech</button>
+                        <button class="filter-pill" data-category="moto">🚗 Moto</button>
+                        <button class="filter-pill" data-category="design">🎨 Design</button>
+                        <button class="filter-pill" data-category="beauty">💄 Beauty</button>
+                        <button class="filter-pill" data-category="kuchnia">🍔 Kuchnia</button>
+                        <button class="filter-pill" data-category="logistyka">📦 Logistyka</button>
+                        <button class="filter-pill" data-category="medycyna">🩺 Medycyna</button>
+                    </div>
+                    <div class="needs-filters">
+                        <select id="format-filter" class="needs-select" aria-label="Format doświadczenia">
+                            <option value="all">📋 Każdy format</option>
+                            <option value="shadowing">👀 Job shadowing</option>
+                            <option value="task">✍️ Mini-zadanie</option>
+                        </select>
+                        <label class="need-toggle"><input type="checkbox" id="filter-noexp"> 🌱 Bez doświadczenia</label>
+                        <label class="need-toggle"><input type="checkbox" id="filter-accessible"> ♿ Dostępne miejsce</label>
+                        <label class="need-toggle"><input type="checkbox" id="filter-flexible"> 🕒 Elastyczne godziny</label>
+                    </div>
+                </div>
+                <div class="offers-list" id="offers-list"></div>
+                <div class="demo-note">Wersja demonstracyjna: oferty, terminy i mentorki są przykładowe – wymienione firmy nie są partnerami projektu.</div>
+            </div>
+            
+            <div id="map-container">
+                <div id="map"></div>
+            </div>
+        </div>
+
+        <div id="view-profile" class="view" style="background: var(--bg-light);">
+    <div class="container-padding">
+        <h2 class="section-title">Hej, przyszła liderko! 👋</h2>
+        <div id="player-stats"></div>
+
+        <h3 class="section-title" style="font-size: 20px; margin-top: 40px;">🎯 Twoje Questy</h3>
+        <p class="quest-intro">Wykonuj zadania podczas praktyk, zdobywaj XP i awansuj na kolejne poziomy. Każda wizyta to nowy zestaw questów.</p>
+        <div id="quests-container" class="quest-grid"></div>
+
+        <h3 class="section-title" style="font-size: 20px; margin-top: 40px;">🏅 Zasługi od mentorek</h3>
+        <p class="quest-intro">Mentorki doceniają Cię po wizycie: potwierdzają obecność, przyznają zasługi i piszą rekomendacje, które możesz dodać do CV.</p>
+        <div id="merits-container" class="quest-grid"></div>
+
+        <h3 class="section-title" style="font-size: 20px; margin-top: 40px;">🏆 Twoje Odznaki</h3>
+        <div id="badges-container" class="upcoming-grid">
+            </div>
+
+        <h3 class="section-title" style="font-size: 20px; margin-top: 40px;">📅 Nadchodzące wizyty</h3>
+        <div id="upcoming-list" class="upcoming-grid"></div>
+    </div>
+</div>
+
+        <div id="view-details" class="view" style="background: var(--bg-light);">
+            <div class="container-padding" id="details-content-area"></div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="dane.js"></script>
+<script>
+    window.openDetails = openDetails;
+    window.switchView = switchView;
+    window.quickSignUp = quickSignUp;
+    // --- 1. Inicjalizacja Mapy ---
+    const map = L.map('map', { zoomControl: false }).setView([50.0413, 21.9990], 13);
+    // Esri Light Gray: darmowe, bez klucza API i działa też przy otwieraniu pliku z dysku (file://)
+    ['Canvas/World_Light_Gray_Base', 'Canvas/World_Light_Gray_Reference'].forEach(layer => L.tileLayer(`https://server.arcgisonline.com/ArcGIS/rest/services/${layer}/MapServer/tile/{z}/{y}/{x}`, {
+        maxZoom: 19,
+        maxNativeZoom: 16,
+        attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
+    }).addTo(map));
+    const DEFAULT_VIEW = { center: [50.0413, 21.9990], zoom: 13 };
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+
+
+    let savedWorkshops = [];
+    let mapMarkers = {}; 
+
+    // --- 3. SILNIK WYSZUKIWANIA I FILTROWANIA ---
+    function getFilteredCompanies() {
+        const query = document.getElementById('main-search-input').value.toLowerCase().trim();
+        const activeCategory = document.querySelector('.filter-pill.active').getAttribute('data-category');
+
+        return companies.filter(company => {
+            const categoryMatch = activeCategory === 'all'
+                || company.category === activeCategory
+                || (activeCategory === 'underrep' && UNDERREPRESENTED.includes(company.category));
+            const searchableText = `${company.name} ${company.city} ${company.title} ${company.category} ${company.tag}`.toLowerCase();
+            const textMatch = query === '' || searchableText.includes(query);
+            return categoryMatch && textMatch && matchesNeeds(company);
+        });
+    }
+
+    // Filtry potrzeb: format, bez doświadczenia, dostępne miejsce, elastyczne godziny
+    function matchesNeeds(company) {
+        const format = document.getElementById('format-filter').value;
+        if (format !== 'all' && company.format !== format) return false;
+        if (document.getElementById('filter-noexp').checked && !company.noExperience) return false;
+        if (document.getElementById('filter-accessible').checked && !company.accessible) return false;
+        if (document.getElementById('filter-flexible').checked && !company.flexibleHours) return false;
+        return true;
+    }
+
+    function isAnyNeedFilterActive() {
+        return document.getElementById('format-filter').value !== 'all'
+            || ['filter-noexp', 'filter-accessible', 'filter-flexible'].some(id => document.getElementById(id).checked);
+    }
+
+    // moveCamera = true tylko przy zmianie wyszukiwania/filtra, żeby np. zapis na warsztat nie przesuwał mapy
+    function updateApp(moveCamera = false) {
+        const filteredData = getFilteredCompanies();
+        renderMarkers(filteredData);
+        renderOffersList(filteredData);
+        if (moveCamera) fitMapToResults(filteredData);
+    }
+
+    function fitMapToResults(filteredData) {
+        const query = document.getElementById('main-search-input').value.trim();
+        const activeCategory = document.querySelector('.filter-pill.active').getAttribute('data-category');
+        const isFiltered = query !== '' || activeCategory !== 'all' || isAnyNeedFilterActive();
+
+        if (isFiltered && filteredData.length > 0) {
+            const bounds = L.latLngBounds(filteredData.map(c => [c.lat, c.lng]));
+            // maxZoom: przy jednym wyniku bounds to punkt i mapa zrobiłaby zoom na maksimum
+            map.flyToBounds(bounds.pad(0.2), { duration: 0.8, maxZoom: 15 });
+        } else if (!isFiltered) {
+            map.flyTo(DEFAULT_VIEW.center, DEFAULT_VIEW.zoom, { duration: 0.8 });
+        }
+    }
+
+    // Debounce: nie przelicza mapy przy każdym znaku, tylko gdy użytkownik przestanie pisać
+    let searchTimeout;
+    document.getElementById('main-search-input').addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => updateApp(true), 250);
+    });
+    document.querySelectorAll('.filter-pill').forEach(pill => {
+        pill.addEventListener('click', (e) => {
+            document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            updateApp(true);
+        });
+    });
+    ['format-filter', 'filter-noexp', 'filter-accessible', 'filter-flexible'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => updateApp(true));
+    });
+
+    // --- 4. Renderowanie Markerów ---
+   function renderMarkers(dataToRender) {
+    Object.values(mapMarkers).forEach(m => map.removeLayer(m));
+    mapMarkers = {};
+
+    dataToRender.forEach(company => {
+        const imgHtml = imgTag(company, 'company-icon-img');
+        const customIcon = L.divIcon({ 
+            className: 'custom-marker',
+            html: `<div class="marker-pin">${imgHtml}</div>`,
+            iconSize: [44, 44], 
+            iconAnchor: [22, 44], 
+            popupAnchor: [0, -44] 
+        });
+
+        const isSaved = savedWorkshops.some(saved => saved.id === company.id);
+        const isFull = company.availableSeats === 0;
+        
+        let btnZapisz = "";
+        if (isSaved) {
+            btnZapisz = `<button class="btn-primary" disabled>Zapisano ✓</button>`;
+        } else if (isFull) {
+            btnZapisz = `<button class="btn-primary" disabled style="background: var(--text-muted); color: white; border-color: var(--text-muted);">Brak miejsc 😔</button>`;
+        } else {
+            // Używamy window.quickSignUp
+            btnZapisz = `<button class="btn-primary" onclick="window.quickSignUp(${company.id})">Szybki Zapis</button>`;
+        }
+
+        const seatsClass = company.availableSeats <= 1 ? 'low' : '';
+
+        const popupContent = `
+            <div class="company-card">
+                <div class="company-header">
+                    <div class="company-icon-wrap">${imgHtml}</div>
+                    <div class="company-title">
+                        <h4>${company.name}</h4>
+                        <span class="company-tag">${company.city}</span>
+                    </div>
+                </div>
+                <div class="company-info">
+                    <div class="seats-badge ${seatsClass}">🔥 Zostało miejsc: ${company.availableSeats}</div>
+                    <div class="mentor-tag">👩‍💼 Mentorka: ${company.mentor}</div>
+                    <div class="offer-tags popup-tags">${offerTags(company).map(t => `<span class="offer-tag">${t}</span>`).join('')}</div>
+                    <p><strong>📅 ${company.date}</strong><br/>${company.desc}</p>
+                    <div class="action-buttons">
+                        ${btnZapisz}
+                        <button class="btn-secondary" onclick="window.openDetails(${company.id})">Dowiedz się więcej</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const marker = L.marker([company.lat, company.lng], { icon: customIcon, riseOnHover: true, title: company.name }).bindPopup(popupContent).addTo(map);
+        mapMarkers[company.id] = marker; 
+    });
+}
+
+    // --- 5. Renderowanie Listy (Feedu) ---
+    function renderOffersList(dataToRender) {
+        const listContainer = document.getElementById('offers-list');
+        listContainer.innerHTML = '';
+        
+        if(dataToRender.length === 0) {
+            listContainer.innerHTML = `<div style="text-align:center; padding:40px 20px; color:var(--text-muted); font-weight:600;">Nie znaleziono wyników dla Twoich kryteriów. 🥺</div>`;
+            return;
+        }
+
+        dataToRender.forEach(company => {
+            const isFull = company.availableSeats === 0;
+            const seatsHTML = isFull 
+                ? `<span style="color:red; font-size:11px; font-weight:800;">BRAK MIEJSC</span>` 
+                : `<span style="color:var(--hot-pink); font-size:11px; font-weight:800;">${company.availableSeats} ${seatsWord(company.availableSeats)}</span>`;
+
+            const imgHtml = imgTag(company);
+
+            listContainer.innerHTML += `
+                <div class="mini-card" onclick="focusMarker(${company.id})">
+                    <div class="mc-icon">${imgHtml}</div>
+                    <div class="mc-info">
+                        <h4>${company.name}</h4>
+                        <p>${company.title}</p>
+                        <div class="offer-tags">
+                            <span class="offer-tag ${company.format}">${FORMATS[company.format].icon} ${FORMATS[company.format].label}</span>
+                            ${company.noExperience ? '<span class="offer-tag noexp">🌱 Bez doświadczenia</span>' : ''}
+                            ${company.accessible ? '<span class="offer-tag icon" title="Dostępne miejsce">♿</span>' : ''}
+                            ${company.flexibleHours ? '<span class="offer-tag icon" title="Elastyczne godziny">🕒</span>' : ''}
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span class="company-tag">📍 ${company.city}</span>
+                            ${seatsHTML}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function focusMarker(companyId) {
+        const company = companies.find(c => c.id === companyId);
+        map.setView([company.lat, company.lng], 15, { animate: true, duration: 0.5 });
+        if(mapMarkers[companyId]) {
+            setTimeout(() => { mapMarkers[companyId].openPopup(); }, 500); 
+        }
+    }
+
+    // --- 6. Strona Szczegółów ---
+    function openDetails(companyId) {
+        const company = companies.find(c => c.id === companyId);
+        const container = document.getElementById('details-content-area');
+        
+        const isSaved = savedWorkshops.some(saved => saved.id === company.id);
+        const isFull = company.availableSeats === 0;
+        
+        let btnHtml = "";
+        if (isSaved) btnHtml = `<button class="btn-primary btn-ticket" disabled>Jesteś na liście! ✓</button>`;
+        else if (isFull) btnHtml = `<button class="btn-primary btn-ticket" disabled style="background: var(--text-muted);">Brak wolnych miejsc</button>`;
+        else btnHtml = `<button class="btn-primary btn-ticket" onclick="detailsSignUp(${company.id})">Zapisz się teraz</button>`;
+
+        const seatsClass = company.availableSeats <= 1 ? 'color: var(--hot-pink);' : 'color: var(--deep-black);';
+        const imgHtml = imgTag(company, 'company-icon-img');
+
+        container.innerHTML = `
+            <button class="back-btn" onclick="switchView('map')">← Wróć do mapy i feedu</button>
+            <div class="detail-banner">
+                <div class="detail-banner-icon">${imgHtml}</div>
+                <div class="detail-banner-text">
+                    <h3>${company.name} (📍 ${company.city})</h3>
+                    <h1>${company.title}</h1>
+                </div>
+            </div>
+            <div class="detail-layout">
+                <div class="detail-left">
+                    <section><h2>📖 O warsztacie</h2><p>${company.fullDesc}</p></section>
+                    <section>
+                        <h2>📋 Format i dostępność</h2>
+                        <div class="offer-tags detail-tags">${offerTags(company).map(t => `<span class="offer-tag">${t}</span>`).join('')}</div>
+                        <ul class="safety-list">
+                            <li>${company.format === 'task'
+                                ? '✍️ <b>Mini-zadanie:</b> tworzysz mały materiał edukacyjny pod okiem mentorki i dostajesz od niej feedback.'
+                                : '👀 <b>Job shadowing:</b> towarzyszysz mentorce przy pracy i pytasz o jej codzienność.'}</li>
+                            <li>${company.noExperience
+                                ? '🌱 <b>Bez doświadczenia</b> – nie potrzebujesz CV ani wcześniejszej wiedzy.'
+                                : '📚 <b>Przyda się podstawowa wiedza</b> z tej dziedziny – organizator opisze ją w potwierdzeniu.'}</li>
+                            <li>${company.accessible
+                                ? '♿ <b>Dostępne miejsce</b> – budynek bez barier architektonicznych.'
+                                : '⚠️ <b>Ograniczona dostępność</b> – miejsce może mieć bariery (np. schody, praca na stojąco). Opisz swoje potrzeby przy zapisie.'}</li>
+                            <li>${company.flexibleHours
+                                ? '🕒 <b>Elastyczne godziny</b> – termin i godziny można dopasować do planu lekcji.'
+                                : '🕒 <b>Stałe godziny</b> – ' + company.time + '.'}</li>
+                        </ul>
+                    </section>
+                    <section class="mentor-section">
+                        <h2>👩‍💼 Twoja mentorka</h2>
+                        <p>Przez cały dzień towarzyszy Ci <b>${company.mentor.toLowerCase()}</b> z zespołu ${company.name}. Pokaże Ci swoją codzienną pracę, odpowie na pytania i opowie, jak sama zaczynała.</p>
+                    </section>
+                    <section>
+                        <h2>🛡️ Bezpieczna wizyta</h2>
+                        <ul class="safety-list">
+                            <li>✅ Firma zweryfikowana przez DraftHer i zobowiązana do Kodeksu Bezpiecznej Wizyty</li>
+                            <li>✅ Przypisana mentorka, która jest Twoją osobą kontaktową przez cały dzień</li>
+                            <li>✅ Zapis wymaga zgody rodzica lub opiekuna prawnego</li>
+                            <li>✅ Możesz przyjść z koleżanką – raźniej i bezpieczniej</li>
+                            <li>✅ Po wizycie anonimowo oceniasz, czy czułaś się komfortowo</li>
+                        </ul>
+                    </section>
+                    <section><h2>⏱️ Harmonogram dnia</h2><ul class="schedule-list">
+                        ${company.schedule.map(s => `<li><span class="schedule-time">${s.time}</span><span class="schedule-desc">${s.event}</span></li>`).join('')}
+                    </ul></section>
+                </div>
+                <div class="detail-right">
+                    <div class="ticket-card">
+                        <div class="ticket-header">
+                            <p>Termin wizyty</p>
+                            <h3>${company.date}</h3>
+                            <p style="margin-top:4px; font-weight:800; color:var(--deep-black); margin-bottom:12px;">${company.time}</p>
+                            <div style="font-size: 14px; font-weight: 900; ${seatsClass}">🔥 Wolne miejsca: ${company.availableSeats}</div>
+                        </div>
+                        ${(!isSaved && !isFull) ? `
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="terms-checkbox">
+                            <label for="terms-checkbox">Akceptuję <a>Regulamin</a>.</label>
+                        </div>
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="consent-checkbox">
+                            <label for="consent-checkbox">Mam zgodę rodzica lub opiekuna prawnego na udział w wizycie.</label>
+                        </div>
+                        ${company.availableSeats >= 2 ? `
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="friend-checkbox">
+                            <label for="friend-checkbox">👭 Przyjdę z koleżanką (zarezerwuje 2 miejsca)</label>
+                        </div>` : ''}
+                        <div class="needs-field">
+                            <label for="needs-input">Twoje potrzeby (opcjonalnie)</label>
+                            <textarea id="needs-input" maxlength="200" placeholder="np. poruszam się na wózku, mogę dopiero od 10:00, potrzebuję przerw"></textarea>
+                        </div>` : ''}
+                        ${btnHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+        switchView('details');
+        window.scrollTo(0, 0);
+    }
+
+    // --- 7. Logika Rezerwacji Miejsc ---
+    function quickSignUp(companyId) {
+        // Szybki zapis też wymaga potwierdzenia zgody opiekuna
+        if (!confirm("Potwierdzasz, że masz zgodę rodzica lub opiekuna prawnego na udział w wizycie?")) return;
+        processSignUp(companyId);
+        // Markery są renderowane od nowa, więc otwieramy popup ponownie, żeby pokazać "Zapisano ✓"
+        if (mapMarkers[companyId]) mapMarkers[companyId].openPopup();
+        alert("Zapisano pomyślnie! Miejsce zarezerwowane.\n🎯 W Twoim profilu czekają nowe questy na tę wizytę.");
+    }
+
+    function detailsSignUp(companyId) {
+        if (!document.getElementById('terms-checkbox').checked) { alert("Musisz zaakceptować regulamin! 📜"); return; }
+        if (!document.getElementById('consent-checkbox').checked) { alert("Do zapisu potrzebna jest zgoda rodzica lub opiekuna prawnego. 🛡️"); return; }
+        const friendCheckbox = document.getElementById('friend-checkbox');
+        const withFriend = friendCheckbox ? friendCheckbox.checked : false;
+        processSignUp(companyId, withFriend, document.getElementById('needs-input').value.trim());
+        alert(`Świetnie! ${withFriend ? 'Miejsca dla Ciebie i koleżanki są zarezerwowane. 👭' : 'Twoje miejsce jest zarezerwowane.'}\n🎯 W Twoim profilu czekają nowe questy na tę wizytę.`);
+    }
+
+    function processSignUp(companyId, withFriend = false, needs = '') {
+        const company = companies.find(c => c.id === companyId);
+        const seatsNeeded = withFriend ? 2 : 1;
+        if (!savedWorkshops.includes(company) && company.availableSeats >= seatsNeeded) {
+            company.availableSeats -= seatsNeeded;
+            company.withFriend = withFriend;
+            company.needs = needs || '';
+            savedWorkshops.push(company);
+            updateState(s => { s.saved = savedWorkshops.map(c => ({ id: c.id, withFriend: !!c.withFriend, needs: c.needs || '' })); });
+            renderProfile();
+            updateApp();
+            
+            if(document.getElementById('view-details').classList.contains('active')) {
+                openDetails(companyId);
+            }
+        }
+    }
+
+    // Dane o odznakach - możesz to potem przenieść do bazy
+const availableBadges = [
+    { id: 'first_step', name: 'Pierwszy Krok', icon: '🚀', category: 'all', goal: 1 },
+    { id: 'pioneer', name: 'Przełamuję Schematy', icon: '⚡', category: 'underrep', goal: 2 },
+    { id: 'tech_ninja', name: 'Tech Ninja', icon: '💻', category: 'tech', goal: 2 },
+    { id: 'creative', name: 'Artystka', icon: '🎨', category: 'design', goal: 4 },
+    { id: 'foodie', name: 'Smakoszka', icon: '🍔', category: 'kuchnia', goal: 2 },
+    { id: 'quest_master', name: 'Mistrzyni Questów', icon: '🎯', category: 'quests', goal: 1 },
+    { id: 'appreciated', name: 'Doceniona', icon: '🏅', category: 'merits', goal: 1 },
+    { id: 'merit_collector', name: 'Kolekcjonerka Zasług', icon: '👑', category: 'merits', goal: 5 },
+    { id: 'recommended', name: 'Z Rekomendacją', icon: '📜', category: 'recommendation', goal: 1 }
+];
+
+
+let profileVisited = false;
+const questProgress = {};     // { [companyId]: [true/false, ...] }
+let lastXP = 0;
+
+
+function getVisitProgress(company) {
+    const quests = getVisitQuests(company);
+    if (!questProgress[company.id]) questProgress[company.id] = quests.map(() => false);
+    const done = questProgress[company.id].filter(Boolean).length;
+    return { quests, done, total: quests.length, completed: done === quests.length };
+}
+
+function countCompletedVisits() {
+    return savedWorkshops.filter(c => getVisitProgress(c).completed).length;
+}
+
+// Quest startowy – zaczyna się w profilu; kroki odblokowują się po kolei
+function getStarterSteps() {
+    const anyTaskDone = savedWorkshops.some(c => getVisitProgress(c).done > 0);
+    return [
+        { icon: '👋', text: 'Zajrzyj do swojego profilu', done: profileVisited },
+        { icon: '🗺️', text: 'Zapisz się na pierwszą wizytę z mapy ofert', done: savedWorkshops.length > 0 },
+        { icon: '✅', text: 'Wykonaj pierwsze zadanie podczas wizyty', done: anyTaskDone },
+        { icon: '🏁', text: 'Ukończ wszystkie questy z jednej wizyty', done: countCompletedVisits() > 0 },
+        { icon: '🏅', text: 'Zdobądź pierwszą zasługę od mentorki', done: countMerits() > 0 }
+    ];
+}
+
+// Dane od mentorek (zapisywane przez panel pracodawcy w pracodawca.html) – tylko dla wizyt praktykantki
+function getEmployerFeedback() {
+    const state = loadState();
+    return savedWorkshops.map(company => ({ company, entry: getEmployerEntry(state, company.id) }));
+}
+
+function countMerits() {
+    return getEmployerFeedback().reduce((sum, f) => sum + f.entry.merits.length, 0);
+}
+
+function calcXP() {
+    let xp = getStarterSteps().filter(s => s.done).length * STARTER_XP;
+    savedWorkshops.forEach(company => {
+        const { done, completed } = getVisitProgress(company);
+        xp += done * QUEST_XP + (completed ? VISIT_BONUS_XP : 0);
+    });
+    getEmployerFeedback().forEach(f => { xp += employerXP(f.entry); });
+    return xp;
+}
+
+function toggleQuest(companyId, index) {
+    const company = companies.find(c => c.id === companyId);
+    getVisitProgress(company);
+    questProgress[companyId][index] = !questProgress[companyId][index];
+    updateState(s => { s.quests[companyId] = questProgress[companyId]; });
+    if (getVisitProgress(company).completed) {
+        renderProfile(`🏆 Wizyta w ${company.name} ukończona!`);
+    } else {
+        renderProfile();
+    }
+}
+
+let toastTimeout;
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.add('show');
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => toast.classList.remove('show'), 2600);
+}
+
+function renderPlayerStats(xp) {
+    const level = Math.floor(xp / XP_PER_LEVEL) + 1;
+    const levelName = LEVEL_NAMES[Math.min(level - 1, LEVEL_NAMES.length - 1)];
+    const xpInLevel = xp % XP_PER_LEVEL;
+
+    document.getElementById('player-stats').innerHTML = `
+        <div class="player-card">
+            <div class="player-level"><small>Poziom</small><strong>${level}</strong></div>
+            <div class="player-info">
+                <h3>${levelName}</h3>
+                <p>${xp} XP łącznie · ${XP_PER_LEVEL - xpInLevel} XP do poziomu ${level + 1}</p>
+                <div class="badge-progress-container">
+                    <div class="badge-progress-bar" style="width: ${(xpInLevel / XP_PER_LEVEL) * 100}%"></div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderQuests() {
+    const steps = getStarterSteps();
+    const currentStep = steps.findIndex(s => !s.done);
+    const starterDone = currentStep === -1;
+
+    const starterCard = `
+        <div class="quest-card starter ${starterDone ? 'done' : ''}">
+            <div class="quest-head">
+                <div class="uc-icon">🚀</div>
+                <div>
+                    <h4>Start Przygody</h4>
+                    <p>Quest startowy</p>
+                </div>
+                <span class="quest-xp">${STARTER_XP} XP / krok</span>
+            </div>
+            <ul class="quest-tasks">
+                ${steps.map((s, i) => {
+                    const state = s.done ? 'checked' : (i === currentStep ? 'current' : 'locked');
+                    const mark = s.done ? '✅' : (i === currentStep ? '👉' : '🔒');
+                    return `<li class="quest-task auto ${state}"><span class="quest-state">${mark}</span><span>${s.icon} ${s.text}</span></li>`;
+                }).join('')}
+            </ul>
+            <span class="quest-footer">${starterDone ? 'UKOŃCZONO ✓' : `KROK ${currentStep + 1}/${steps.length} · zalicza się automatycznie`}</span>
+        </div>
+    `;
+
+    const visitCards = savedWorkshops.map(company => {
+        const { quests, done, total, completed } = getVisitProgress(company);
+        return `
+            <div class="quest-card ${completed ? 'done' : ''}">
+                <div class="quest-head">
+                    <div class="uc-icon">${imgTag(company, 'company-icon-img')}</div>
+                    <div>
+                        <h4>${company.name}</h4>
+                        <p>📅 ${company.date}</p>
+                    </div>
+                    <span class="quest-xp">+${total * QUEST_XP + VISIT_BONUS_XP} XP</span>
+                </div>
+                <ul class="quest-tasks">
+                    ${quests.map((q, i) => {
+                        const checked = questProgress[company.id][i];
+                        return `<li><label class="quest-task ${checked ? 'checked' : ''}">
+                            <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleQuest(${company.id}, ${i})">
+                            <span>${q.icon} ${q.text}</span>
+                        </label></li>`;
+                    }).join('')}
+                </ul>
+                <div class="badge-progress-container">
+                    <div class="badge-progress-bar" style="width: ${(done / total) * 100}%"></div>
+                </div>
+                <span class="quest-footer">${completed ? `UKOŃCZONO ✓ · BONUS +${VISIT_BONUS_XP} XP` : `POSTĘP: ${done}/${total} · wykonaj podczas wizyty`}</span>
+            </div>
+        `;
+    }).join('');
+
+    const emptyHint = savedWorkshops.length === 0
+        ? `<div class="quest-card" style="border-style: dashed; box-shadow: none; display: flex; align-items: center; justify-content: center; text-align: center; color: var(--text-muted); font-weight: 700;">
+               Zapisz się na wizytę z mapy ofert, a tutaj pojawią się questy do wykonania podczas praktyk. 🗺️
+           </div>`
+        : '';
+
+    document.getElementById('quests-container').innerHTML = starterCard + visitCards + emptyHint;
+}
+
+// Odświeża cały profil i pokazuje powiadomienie o zdobytym XP
+function renderProfile(extraMessage = '') {
+    const xp = calcXP();
+    renderPlayerStats(xp);
+    renderQuests();
+    renderMerits();
+    renderUpcoming();
+    renderBadges();
+
+    const gained = xp - lastXP;
+    const levelUp = Math.floor(xp / XP_PER_LEVEL) > Math.floor(lastXP / XP_PER_LEVEL);
+    if (levelUp) showToast(`⬆️ Nowy poziom: ${Math.floor(xp / XP_PER_LEVEL) + 1}! (+${gained} XP)`);
+    else if (extraMessage && gained > 0) showToast(`${extraMessage} (+${gained} XP)`);
+    else if (gained > 0) showToast(`+${gained} XP 🎯`);
+    lastXP = xp;
+}
+
+// Zasługi i rekomendacje przyznane przez mentorki w panelu pracodawcy
+function renderMerits() {
+    const container = document.getElementById('merits-container');
+    const feedback = getEmployerFeedback().filter(f => f.entry.attended || f.entry.merits.length || f.entry.recommendation);
+
+    if (feedback.length === 0) {
+        container.innerHTML = `<div class="merit-empty">Po wizycie mentorka potwierdzi Twoją obecność i może przyznać Ci zasługi oraz rekomendację do CV. Pojawią się tutaj. 🏅</div>`;
+        return;
+    }
+
+    container.innerHTML = feedback.map(({ company, entry }) => `
+        <div class="merit-card">
+            <div class="quest-head">
+                <div class="uc-icon">${imgTag(company, 'company-icon-img')}</div>
+                <div>
+                    <h4>${company.name}</h4>
+                    <p>👩‍💼 ${company.mentor}</p>
+                </div>
+                <span class="quest-xp">+${employerXP(entry)} XP</span>
+            </div>
+            ${entry.attended ? `<div class="merit-attended">✔ Obecność potwierdzona przez mentorkę</div>` : ''}
+            <div class="merit-chips">
+                ${entry.merits.map(id => MERITS.find(m => m.id === id)).filter(Boolean)
+                    .map(m => `<span class="merit-chip" title="${m.desc}">${m.icon} ${m.name}</span>`).join('')}
+            </div>
+            ${entry.recommendation ? `<blockquote class="merit-quote">„${escapeHtml(entry.recommendation)}”<cite>– ${company.mentor}, ${company.name}</cite></blockquote>` : ''}
+        </div>
+    `).join('');
+}
+
+// --- 8. Renderowanie Profilu ---
+function renderUpcoming() {
+    const listContainer = document.getElementById('upcoming-list');
+
+    if (savedWorkshops.length === 0) {
+        listContainer.innerHTML = `<div style="grid-column: 1/-1; padding: 20px; border: 2px dashed var(--border-light); border-radius: 16px; text-align: center; color: var(--text-muted); font-weight: 600;">Brak zapisów. Przejdź do Feedu!</div>`;
+        return;
+    }
+
+    listContainer.innerHTML = savedWorkshops.map(company => {
+        const { done, total } = getVisitProgress(company);
+        return `
+        <div class="upcoming-card">
+            <div class="uc-icon">${imgTag(company, 'company-icon-img')}</div>
+            <div class="uc-info">
+                <h4>${company.title}</h4>
+                <p>🏢 ${company.name} | 📅 ${company.date}</p>
+                <p style="color: var(--deep-black);">👩‍💼 ${company.mentor}${company.withFriend ? ' · 👭 z koleżanką' : ''}</p>
+                <p style="color: var(--text-muted);">🎯 Questy: ${done}/${total}${getEmployerEntry(loadState(), company.id).attended ? ' · ✔ obecność potwierdzona' : ''}</p>
+            </div>
+        </div>
+    `;
+    }).join('');
+}
+
+
+
+function renderBadges() {
+    const badgesContainer = document.getElementById('badges-container');
+    
+    // Pobieramy kategorie z zapisanych warsztatów
+    const userCategories = savedWorkshops.map(c => c.category);
+
+    badgesContainer.innerHTML = availableBadges.map(badge => {
+        let currentProgress = 0;
+
+        // Obliczamy progres
+        if (badge.category === 'all') {
+            currentProgress = savedWorkshops.length;
+        } else if (badge.category === 'quests') {
+            currentProgress = countCompletedVisits();
+        } else if (badge.category === 'merits') {
+            currentProgress = countMerits();
+        } else if (badge.category === 'recommendation') {
+            currentProgress = getEmployerFeedback().filter(f => f.entry.recommendation).length;
+        } else if (badge.category === 'underrep') {
+            currentProgress = userCategories.filter(cat => UNDERREPRESENTED.includes(cat)).length;
+        } else {
+            currentProgress = userCategories.filter(cat => cat === badge.category).length;
+        }
+
+        const isUnlocked = currentProgress >= badge.goal;
+        const progressPercent = Math.min((currentProgress / badge.goal) * 100, 100);
+
+        return `
+            <div class="badge-card ${isUnlocked ? '' : 'badge-locked'}">
+                <span class="badge-icon">${badge.icon}</span>
+                <span class="badge-name">${badge.name}</span>
+                
+                <div class="badge-progress-container">
+                    <div class="badge-progress-bar" style="width: ${progressPercent}%"></div>
+                </div>
+                
+                <span class="badge-count">${isUnlocked ? 'UKOŃCZONO ✓' : `PROGRES: ${currentProgress}/${badge.goal}`}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+    // --- 9. Nawigacja (POPRAWIONA LOGIKA) ---
+    function switchView(viewId, navBtn = null) {
+        // Ukryj wszystkie widoki
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        // Pokaż wybrany
+        const targetView = document.getElementById('view-' + viewId);
+        if (targetView) targetView.classList.add('active');
+
+        // Resetuj wszystkie przyciski nav-btn
+        const allNavButtons = document.querySelectorAll('.nav-btn');
+        allNavButtons.forEach(b => b.classList.remove('active'));
+
+        if(navBtn) {
+            // Jeśli kliknięto przycisk fizycznie
+            navBtn.classList.add('active');
+        } else {
+            // Jeśli wywołano z kodu (np. przez parametr URL)
+            // Szukamy przycisku po tekście lub akcji, by uniknąć problemów z indeksami
+            if (viewId === 'map') {
+                const mapBtn = Array.from(allNavButtons).find(btn => btn.innerText.includes('MAPA'));
+                if (mapBtn) mapBtn.classList.add('active');
+            } else if (viewId === 'profile') {
+                const profileBtn = Array.from(allNavButtons).find(btn => btn.innerText.includes('PROFIL'));
+                if (profileBtn) profileBtn.classList.add('active');
+            }
+        }
+
+        // Pierwsze wejście do profilu zalicza pierwszy krok questa startowego
+        if (viewId === 'profile' && !profileVisited) {
+            profileVisited = true;
+            updateState(s => { s.profileVisited = true; });
+            renderProfile('👋 Quest rozpoczęty!');
+        }
+
+        // Odśwież rozmiar mapy jeśli przełączono na mapę
+        if (viewId === 'map') {
+            setTimeout(() => { map.invalidateSize(); }, 100);
+        }
+    }
+
+    // --- 10. Odbiornik parametrów URL (NOWE - NAPRAWA) ---
+    window.addEventListener('load', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const viewFromUrl = urlParams.get('view'); // szuka 'map' lub 'profile'
+
+        if (viewFromUrl) {
+            // Wywołujemy z lekkim opóźnieniem, by mieć pewność że DOM jest gotowy
+            setTimeout(() => {
+                switchView(viewFromUrl);
+            }, 50);
+        }
+    });
+
+    // Przywrócenie zapisanego stanu (zapisy, questy, wejście do profilu) z localStorage
+    function restoreState() {
+        const state = loadState();
+        state.saved.forEach(({ id, withFriend, needs }) => {
+            const company = companies.find(c => c.id === id);
+            if (!company || savedWorkshops.includes(company)) return;
+            company.availableSeats = Math.max(0, company.availableSeats - (withFriend ? 2 : 1));
+            company.withFriend = withFriend;
+            company.needs = needs || '';
+            savedWorkshops.push(company);
+        });
+        Object.assign(questProgress, state.quests);
+        profileVisited = state.profileVisited;
+    }
+
+    // Gdy mentorka przyzna zasługę w panelu pracodawcy (inna karta), profil odświeża się na żywo
+    window.addEventListener('storage', (e) => {
+        if (e.key !== STORAGE_KEY) return;
+        renderProfile('🏅 Nowa zasługa od mentorki!');
+    });
+
+    // START APLIKACJI
+    restoreState();
+    updateApp();
+    lastXP = calcXP();   // bez powiadomienia o XP zdobytym w poprzednich sesjach
+    renderProfile();
+</script>
+</body>
+</html>

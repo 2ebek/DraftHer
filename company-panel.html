@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DraftHer - Panel Firmy B2B</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --neon-yellow: #E5FF00;
+            --hot-pink: #FF0066;
+            --deep-black: #111111;
+            --white: #FFFFFF;
+            --bg-light: #F4F4F5;
+            --text-muted: #71717A;
+            --border-light: #E4E4E7;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body, html { height: 100%; background-color: var(--bg-light); color: var(--deep-black); overflow: hidden; }
+
+        .app-container { display: flex; height: 100vh; width: 100vw; }
+
+        /* --- SIDEBAR B2B (Ciemny motyw dla odróżnienia) --- */
+        .sidebar {
+            width: 280px; background: var(--deep-black); color: var(--white);
+            padding: 32px 24px; display: flex; flex-direction: column; gap: 40px;
+            border-right: 4px solid var(--neon-yellow); z-index: 10;
+        }
+        .brand h1 { font-weight: 900; font-size: 28px; text-transform: uppercase; letter-spacing: -1px; }
+        .brand span { color: var(--neon-yellow); }
+        .brand p { color: var(--text-muted); font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px;}
+        
+        .nav-menu { display: flex; flex-direction: column; gap: 8px; }
+        .nav-btn {
+            padding: 14px 16px; border-radius: 12px; border: none; background: transparent;
+            cursor: pointer; font-weight: 800; text-align: left; transition: 0.2s; font-size: 14px; color: #A1A1AA;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .nav-btn:hover { color: var(--white); background: rgba(255,255,255,0.05); }
+        .nav-btn.active { background: var(--neon-yellow); color: var(--deep-black); }
+
+        .company-profile { margin-top: auto; display: flex; align-items: center; gap: 12px; padding-top: 24px; border-top: 1px solid #333; }
+        .cp-avatar { width: 40px; height: 40px; background: var(--white); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; color: var(--deep-black); }
+        .cp-info h4 { font-size: 14px; font-weight: 800; }
+        .cp-info p { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+
+        /* --- OBSZAR ROBOCZY --- */
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
+        
+        .top-bar { background: var(--white); padding: 20px 40px; border-bottom: 2px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 5; }
+        .top-bar h2 { font-size: 24px; font-weight: 900; }
+        .top-bar-actions { display: flex; gap: 12px; }
+
+        /* Formularz */
+        .form-container { padding: 40px; max-width: 900px; margin: 0 auto; width: 100%; }
+        
+        .form-section { background: var(--white); border: 2px solid var(--deep-black); border-radius: 24px; padding: 32px; box-shadow: 6px 6px 0px var(--deep-black); margin-bottom: 32px; }
+        .form-section-title { font-size: 20px; font-weight: 900; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; border-bottom: 2px solid var(--border-light); padding-bottom: 16px; }
+
+        .input-group { margin-bottom: 20px; }
+        .input-row { display: flex; gap: 20px; }
+        .input-row .input-group { flex: 1; }
+        
+        label { display: block; font-size: 13px; font-weight: 800; color: var(--deep-black); margin-bottom: 8px; text-transform: uppercase; }
+        input[type="text"], input[type="number"], input[type="date"], input[type="time"], select, textarea {
+            width: 100%; padding: 14px 16px; font-size: 15px; font-weight: 600; font-family: 'Inter', sans-serif;
+            border: 2px solid var(--border-light); border-radius: 12px; background: var(--bg-light); transition: 0.2s; outline: none;
+        }
+        input:focus, select:focus, textarea:focus { border-color: var(--hot-pink); background: var(--white); box-shadow: 0 0 0 4px rgba(255, 0, 102, 0.1); }
+        textarea { resize: vertical; min-height: 120px; }
+
+        /* Harmonogram Builder */
+        #schedule-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+        .schedule-item { display: flex; gap: 12px; align-items: center; }
+        .schedule-item input[type="time"] { width: 120px; }
+        .btn-remove { background: var(--bg-light); border: 2px solid var(--border-light); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; transition: 0.2s; }
+        .btn-remove:hover { border-color: red; color: red; }
+        
+        .btn-outline { background: transparent; border: 2px dashed var(--deep-black); border-radius: 12px; padding: 14px; font-weight: 800; width: 100%; cursor: pointer; transition: 0.2s; color: var(--deep-black); }
+        .btn-outline:hover { background: var(--bg-light); border-style: solid; }
+
+        /* Główny przycisk publikacji */
+        .publish-area { display: flex; justify-content: flex-end; margin-bottom: 60px; }
+        .btn-publish {
+            background: var(--neon-yellow); color: var(--deep-black); border: 4px solid var(--deep-black);
+            padding: 20px 40px; font-size: 18px; font-weight: 900; border-radius: 16px; cursor: pointer;
+            box-shadow: 6px 6px 0px var(--deep-black); transition: transform 0.2s; text-transform: uppercase;
+        }
+        .btn-publish:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0px var(--hot-pink); border-color: var(--hot-pink); color: var(--hot-pink); }
+
+        /* Ekran Sukcesu */
+        #success-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--white); z-index: 100; display: none; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center;
+        }
+        #success-screen h1 { font-size: 64px; font-weight: 900; color: var(--hot-pink); margin-bottom: 20px; letter-spacing: -2px;}
+        #success-screen p { font-size: 20px; font-weight: 600; color: var(--text-muted); max-width: 500px; line-height: 1.5; margin-bottom: 40px; }
+        .big-icon { font-size: 100px; margin-bottom: 20px; animation: bounce 1s infinite alternate; }
+
+    .badge-selector-grid {
+        display: grid;
+        /* Wymuszenie 4 kolumn obok siebie */
+        grid-template-columns: repeat(4, 1fr); 
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .badge-option {
+        background: var(--white);
+        border: 3px solid var(--border-light);
+        border-radius: 20px;
+        padding: 15px 10px; /* Nieco mniejszy padding, żeby zmieściły się obok siebie */
+        text-align: center;
+        cursor: pointer;
+        transition: 0.2s;
+        position: relative;
+    }
+
+    .badge-option input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+    }
+
+    .badge-option:hover {
+        border-color: var(--deep-black);
+        transform: translateY(-2px);
+    }
+
+    .badge-option.selected {
+        border-color: var(--deep-black);
+        box-shadow: 6px 6px 0px var(--neon-yellow);
+    }
+
+    .badge-icon {
+        font-size: 32px; /* Lekko zmniejszone, by pasowały do rzędu */
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .badge-label {
+        font-weight: 900;
+        text-transform: uppercase;
+        font-size: 11px; /* Mniejszy font dla lepszego dopasowania */
+        display: block;
+        color: var(--deep-black);
+    }
+
+    .badge-desc {
+        font-size: 9px;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin-top: 4px;
+        display: block;
+    }
+        .safety-check { display: flex; gap: 12px; align-items: flex-start; text-transform: none; font-size: 14px; font-weight: 600; line-height: 1.5; cursor: pointer; }
+        .safety-check input { width: 20px; height: 20px; accent-color: var(--hot-pink); flex-shrink: 0; margin-top: 2px; }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-20px); } }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <aside class="sidebar">
+        <div class="brand">
+            <h1>Draft<span>Her</span></h1>
+            <p>Dla Biznesu</p>
+        </div>
+        <nav class="nav-menu">
+            <a href="index.html" class="nav-btn" style="text-decoration: none;">🏠 Strona główna</a>
+            <button class="nav-btn">📊 Pulpit</button>
+            <button class="nav-btn active">✍️ Dodaj Ofertę</button>
+            <button class="nav-btn">📋 Twoje Oferty (3)</button>
+            <a href="pracodawca.html" class="nav-btn" style="text-decoration: none;">🏅 Praktykantki i zasługi</a>
+            <button class="nav-btn">⚙️ Ustawienia</button>
+        </nav>
+        <div class="company-profile">
+            <div class="cp-avatar">C</div>
+            <div class="cp-info">
+                <h4>PrimeBit Studio</h4>
+                <p>Plan Premium</p>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content" id="main-scroll">
+        <header class="top-bar">
+            <h2>Kreator Job Shadowing</h2>
+            <div class="top-bar-actions">
+                <button style="padding: 10px 20px; border-radius: 10px; border: 2px solid var(--border-light); background: transparent; font-weight: 800; cursor: pointer;">Zapisz szkic</button>
+            </div>
+        </header>
+
+        <div class="form-container" id="form-area">
+            <form id="offer-form">
+                
+                <div class="form-section">
+                    <div class="form-section-title"><span>1️⃣</span> Podstawowe Informacje</div>
+                    
+                    <div class="input-group">
+                        <label>Chwytliwy Tytuł Oferty</label>
+                        <input type="text" placeholder="np. Dzień z Game Devem od kuchni" required>
+                    </div>
+
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label>Branża / Kategoria</label>
+                            <select required>
+                                <option value="" disabled selected>Wybierz z listy...</option>
+                                <option value="tech">💻 IT & Tech</option>
+                                <option value="design">🎨 Design & Grafika</option>
+                                <option value="moto">🚗 Motoryzacja</option>
+                                <option value="kuchnia">🍔 Gastronomia</option>
+                                <option value="logistyka">📦 Logistyka</option>
+                                <option value="medycyna">🩺 Medycyna</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Miasto (Lokalizacja Biura)</label>
+                            <input type="text" placeholder="np. Rzeszów" required>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Krótki Opis (Zajawka na mapie)</label>
+                        <input type="text" placeholder="Jedno, dwa zdania. Np: Zobacz jak powstają hity sprzedażowe w naszej agencji!" required maxlength="120">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="form-section-title"><span>2️⃣</span> Szczegóły i Opis</div>
+                    
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label>Data wydarzenia</label>
+                            <input type="date" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Liczba wolnych miejsc (FOMO!)</label>
+                            <input type="number" placeholder="np. 3" min="1" max="50" required>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Mentorka prowadząca (stanowisko)</label>
+                        <input type="text" placeholder="np. Inżynierka oprogramowania, Mechatroniczka" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Pełny opis wydarzenia</label>
+                        <textarea placeholder="Napisz do uczennic. Bez korpo-mowy! Co dokładnie będą robić? Kogo poznają? Czy będzie darmowa pizza? " required></textarea>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="form-section-title"><span>3️⃣</span> Harmonogram Dnia (Opcjonalnie)</div>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px; font-weight: 600;">Młodzi lubią wiedzieć co ich czeka. Rozpisz plan krok po kroku.</p>
+                    
+                    <div id="schedule-list">
+                        <div class="schedule-item">
+                            <input type="time" value="09:00">
+                            <input type="text" placeholder="np. Poranna kawa i integracja z zespołem" style="flex-grow: 1;">
+                            <button type="button" class="btn-remove" onclick="this.parentElement.remove()">🗑️</button>
+                        </div>
+                    </div>
+
+
+                    <button type="button" class="btn-outline" onclick="addScheduleItem()">+ Dodaj kolejny punkt programu</button>
+                </div>
+                
+   <div class="form-section">
+    <div class="form-section-title"><span>4️⃣</span> Wybierz Odznakę za Wydarzenie</div>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px; font-weight: 600;">Wybierz nagrodę, którą otrzyma uczennica po zakończeniu wizyty.</p>
+    
+    <div class="badge-selector-grid" id="badge-selector">
+        <label class="badge-option selected">
+            <input type="radio" name="event-badge" value="first_step" checked>
+            <span class="badge-icon">🚀</span>
+            <span class="badge-label">Pierwszy Krok</span>
+            <span class="badge-desc">Za start</span>
+        </label>
+
+        <label class="badge-option">
+            <input type="radio" name="event-badge" value="tech_ninja">
+            <span class="badge-icon">💻</span>
+            <span class="badge-label">Tech Ninja</span>
+            <span class="badge-desc">Za IT</span>
+        </label>
+
+        <label class="badge-option">
+            <input type="radio" name="event-badge" value="creative">
+            <span class="badge-icon">🎨</span>
+            <span class="badge-label">Artystka</span>
+            <span class="badge-desc">Za Design</span>
+        </label>
+
+        <label class="badge-option">
+            <input type="radio" name="event-badge" value="foodie">
+            <span class="badge-icon">🍔</span>
+            <span class="badge-label">Smakoszka</span>
+            <span class="badge-desc">Za Gastro</span>
+        </label>
+    </div>
+</div>
+
+<script>
+    // Logika zaznaczania (zostaje bez zmian)
+    document.querySelectorAll('.badge-option').forEach(option => {
+        option.addEventListener('click', function() {
+            document.querySelectorAll('.badge-option').forEach(opt => opt.classList.remove('selected'));
+            this.classList.add('selected');
+        });
+    });
+</script>
+
+                <div class="form-section">
+                    <div class="form-section-title"><span>🛡️</span> Kodeks Bezpiecznej Wizyty</div>
+                    <label class="safety-check">
+                        <input type="checkbox" required>
+                        <span>Zobowiązujemy się, że wizytę prowadzi przypisana mentorka, uczennica nie zostaje sama z osobami spoza programu, a firma przestrzega zasad Kodeksu Bezpiecznej Wizyty DraftHer.</span>
+                    </label>
+                </div>
+
+                <div class="publish-area">
+                    <button type="submit" class="btn-publish">Opublikuj Ofertę</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="success-screen">
+            <div class="big-icon">🎉</div>
+            <h1>Bomba! Oferta zrobiona.</h1>
+            <p>Twoje wydarzenie trafiło właśnie na mapę główną aplikacji. Uczennice już widzą Twoją firmę i mogą rezerwować miejsca.</p>
+            <button onclick="location.reload()" style="background: var(--deep-black); color: var(--neon-yellow); padding: 16px 32px; font-size: 16px; font-weight: 800; border-radius: 12px; border: none; cursor: pointer; margin-top: 20px;">Dodaj kolejną ofertę</button>
+        </div>
+    </main>
+</div>
+
+<script>
+    // Dodawanie nowych punktów do harmonogramu
+    function addScheduleItem() {
+        const list = document.getElementById('schedule-list');
+        const newItem = document.createElement('div');
+        newItem.className = 'schedule-item';
+        
+        newItem.innerHTML = `
+            <input type="time">
+            <input type="text" placeholder="Co będzie się działo?" style="flex-grow: 1;">
+            <button type="button" class="btn-remove" onclick="this.parentElement.remove()">🗑️</button>
+        `;
+        list.appendChild(newItem);
+    }
+
+    // Obsługa wysyłania formularza (Fake Submit na potrzeby prezentacji)
+    document.getElementById('offer-form').addEventListener('submit', function(e) {
+        e.preventDefault(); // Zapobiega przeładowaniu strony
+        
+        // Pokaż ekran sukcesu i przewiń na samą górę okna
+        document.getElementById('form-area').style.display = 'none';
+        document.querySelector('.top-bar').style.display = 'none';
+        
+        const successScreen = document.getElementById('success-screen');
+        successScreen.style.display = 'flex';
+        
+        // Przewiń główny obszar na górę
+        document.getElementById('main-scroll').scrollTo(0, 0);
+        
+        // Opcjonalnie: Konfetti w konsoli dla jury ;)
+        console.log("%c OFERTA OPUBLIKOWANA! ", "background: #E5FF00; color: #111111; font-size: 24px; font-weight: bold;");
+    });
+</script>
+
+</body>
+</html>

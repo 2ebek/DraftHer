@@ -1,0 +1,9 @@
+# Stare wersje robocze – nie są częścią portalu i nie trafiają na hosting
+index444.html
+ind2 copy.html
+placehold
+hahaha.json
+
+# Lokalne pliki z tokenami i konfiguracją – nigdy na serwer
+.env*
+.gitignore

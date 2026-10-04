@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DraftHer - Zobacz, kim możesz zostać</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* --- OFICJALNY DESIGN SYSTEM --- */
+        :root {
+            --neon-yellow: #E5FF00;
+            --hot-pink: #FF0066;
+            --deep-black: #111111;
+            --white: #FFFFFF;
+            --bg-light: #F4F4F5;
+            --text-muted: #71717A;
+            --border-light: #E4E4E7;
+            --card-radius: 24px;
+            --green: #22C55E;
+            --green-dark: #15803D;
+            --gold: #A16207;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; text-decoration: none; }
+
+        body {
+            background-color: var(--bg-light);
+            min-height: 100vh;
+            overflow-x: hidden; /* Pozwalamy na scrollowanie pionowe, blokujemy poziome */
+        }
+
+        /* --- KANWAS JAKO TŁO --- */
+        #dotCanvas {
+            position: fixed; /* Kropki zostają w miejscu podczas scrollowania */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; /* Kluczowe: kropki lądują pod treścią */
+            pointer-events: none; /* Kliknięcia przechodzą "przez" kropki do przycisków */
+        }
+
+        /* --- NAWIGACJA --- */
+        .top-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--white); padding: 16px 32px; 
+            border-bottom: 2px solid var(--deep-black); 
+            position: sticky; top: 0; z-index: 2000;
+        }
+        
+        .brand { display: flex; align-items: baseline; gap: 12px; }
+        .brand h1 { font-weight: 900; font-size: 28px; text-transform: uppercase; letter-spacing: -1px; color: var(--deep-black); }
+        .brand span { color: var(--hot-pink); }
+        .brand p { color: var(--text-muted); font-weight: 800; font-size: 13px; text-transform: uppercase;}
+        
+        .nav-menu { display: flex; gap: 16px; }
+        .nav-btn {
+            padding: 12px 24px; border-radius: 99px; border: 2px solid transparent; background: var(--bg-light);
+            cursor: pointer; font-weight: 800; transition: 0.2s; font-size: 14px; color: var(--text-muted); display: flex; align-items: center; justify-content: center;
+        }
+        .nav-btn.active { background: var(--deep-black); color: var(--neon-yellow); border-color: var(--deep-black); }
+        .nav-btn:hover:not(.active) { border-color: var(--hot-pink); color: var(--deep-black); }
+
+        /* --- HERO SECTION --- */
+        .hero {
+            padding: 100px 20px 60px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative; /* Dla poprawnego układu */
+        }
+
+        .hero h1 {
+            font-size: clamp(40px, 8vw, 85px);
+            font-weight: 900;
+            line-height: 1.05;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+            letter-spacing: -2px;
+            color: var(--deep-black);
+        }
+
+        .hero h1 span {
+            background: var(--neon-yellow);
+            color: var(--deep-black);
+            padding: 4px 16px;
+            display: inline-block;
+            border: 4px solid var(--deep-black);
+            transform: rotate(-2deg);
+            box-shadow: 6px 6px 0px var(--hot-pink);
+            margin-top: 10px;
+        }
+
+        .hero p {
+            color: var(--text-muted);
+            font-size: 20px;
+            font-weight: 600;
+            max-width: 700px;
+            margin: 0 auto 40px;
+            line-height: 1.5;
+        }
+
+        .btn-start {
+            background: var(--hot-pink);
+            color: var(--white);
+            padding: 20px 48px;
+            font-size: 18px;
+            font-weight: 900;
+            text-transform: uppercase;
+            border: 4px solid var(--deep-black);
+            border-radius: 16px;
+            box-shadow: 6px 6px 0px var(--deep-black);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-start:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 8px 8px 0px var(--neon-yellow);
+        }
+
+        /* --- GRID KART --- */
+        .grid {
+            max-width: 1200px;
+            margin: 0 auto 100px;
+            padding: 0 40px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            position: relative;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.9); /* Lekka przezroczystość by kropki lekko przebijały */
+            backdrop-filter: blur(5px); /* Efekt oszronionego szkła */
+            border: 3px solid var(--deep-black);
+            border-radius: var(--card-radius);
+            padding: 40px 30px;
+            box-shadow: 8px 8px 0px var(--deep-black);
+            transition: 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            transform: translate(-4px, -4px);
+            box-shadow: 12px 12px 0px var(--neon-yellow);
+            border-color: var(--hot-pink);
+        }
+
+        .card-icon {
+            font-size: 40px;
+            margin-bottom: 24px;
+            background: var(--bg-light);
+            width: 80px; height: 80px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 16px;
+            border: 2px solid var(--deep-black);
+        }
+
+        .card h3 { 
+            font-size: 22px; font-weight: 900; text-transform: uppercase; 
+            margin-bottom: 16px; color: var(--deep-black);
+        }
+        
+        .card-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+        .card-link { align-self: flex-start; font-weight: 900; font-size: 14px; text-transform: uppercase; color: var(--deep-black); background: var(--neon-yellow); border: 2px solid var(--deep-black); border-radius: 99px; padding: 10px 18px; transition: 0.2s; }
+        .card-link:hover { background: var(--hot-pink); color: var(--white); }
+
+        .card p { 
+            color: var(--text-muted); font-size: 16px; font-weight: 600; line-height: 1.6;
+        }
+
+        /* --- SEKCJE INFORMACYJNE (wspólny układ) --- */
+        .info-section { max-width: 1200px; margin: 0 auto 110px; padding: 0 40px; position: relative; }
+        .section-tag {
+            display: inline-block; background: var(--deep-black); color: var(--neon-yellow); font-size: 12px; font-weight: 900;
+            text-transform: uppercase; padding: 6px 12px; border-radius: 8px; margin-bottom: 18px; letter-spacing: 0.3px;
+        }
+        .section-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 40px; margin-bottom: 44px; flex-wrap: wrap; }
+        .section-head h2 {
+            font-size: clamp(36px, 5.5vw, 64px); font-weight: 900; text-transform: uppercase; line-height: 0.98;
+            letter-spacing: -2px; color: var(--deep-black);
+        }
+        .section-head h2 span { color: var(--hot-pink); }
+        .section-head p { max-width: 460px; font-size: 18px; font-weight: 600; line-height: 1.6; color: var(--text-muted); }
+        .section-note { margin-top: 30px; font-size: 13px; font-weight: 600; color: var(--text-muted); line-height: 1.6; }
+
+        .icon-tile {
+            width: 56px; height: 56px; border-radius: 14px; border: 2px solid var(--deep-black); display: flex;
+            align-items: center; justify-content: center; font-size: 26px; margin-bottom: 20px;
+        }
+        .tile-pink { background: var(--hot-pink); }
+        .tile-green { background: var(--green); }
+        .tile-yellow { background: var(--neon-yellow); }
+        .tile-white { background: var(--white); }
+
+        /* 01 – Potrzeba i hipoteza */
+        .need-stat {
+            display: inline-flex; align-items: center; gap: 20px; background: var(--deep-black); color: var(--white);
+            border-radius: var(--card-radius); padding: 20px 30px; margin-bottom: 36px; box-shadow: 8px 8px 0px var(--hot-pink);
+        }
+        .need-stat strong { font-size: 44px; font-weight: 900; color: var(--neon-yellow); white-space: nowrap; }
+        .need-stat p { font-size: 17px; font-weight: 700; max-width: 340px; line-height: 1.4; }
+        .need-stat small { display: block; font-size: 12px; color: #A1A1AA; font-weight: 600; margin-top: 4px; }
+        .need-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+        .need-card {
+            border: 3px solid var(--deep-black); border-radius: var(--card-radius); padding: 32px 30px;
+            box-shadow: 8px 8px 0px var(--deep-black); display: flex; flex-direction: column; transition: 0.2s;
+        }
+        .need-card:hover { transform: translate(-4px, -4px); box-shadow: 12px 12px 0px var(--deep-black); }
+        .need-card.pink { background: #FFE4EE; }
+        .need-card.green { background: #E3FCEB; }
+        .need-card.yellow { background: #FBFFD6; }
+        .need-card h3 { font-size: 22px; font-weight: 900; text-transform: uppercase; margin-bottom: 12px; color: var(--deep-black); }
+        .need-card p { font-size: 16px; font-weight: 600; line-height: 1.6; color: #3F3F46; margin-bottom: 22px; }
+        .pill {
+            margin-top: auto; align-self: flex-start; background: var(--neon-yellow); border: 2px solid var(--deep-black);
+            border-radius: 99px; padding: 8px 16px; font-size: 13px; font-weight: 900; color: var(--deep-black);
+        }
+        .hypothesis {
+            margin-top: 36px; background: var(--white); border: 3px dashed var(--deep-black); border-radius: var(--card-radius);
+            padding: 22px 28px; font-size: 15px; font-weight: 600; line-height: 1.6; color: var(--text-muted);
+        }
+        .hypothesis b { color: var(--deep-black); text-transform: uppercase; font-weight: 900; }
+
+        /* 02 – Wsparcie mentorek */
+        .mentor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+        .mentor-card {
+            background: var(--white); border: 3px solid var(--deep-black); border-radius: var(--card-radius); overflow: hidden;
+            box-shadow: 8px 8px 0px var(--deep-black); transition: 0.2s; display: flex; flex-direction: column;
+        }
+        .mentor-card:hover { transform: translate(-4px, -4px); }
+        .mentor-card.pink:hover { box-shadow: 12px 12px 0px var(--hot-pink); }
+        .mentor-card.green:hover { box-shadow: 12px 12px 0px var(--green); }
+        .mentor-card.gold:hover { box-shadow: 12px 12px 0px var(--neon-yellow); }
+        .mentor-photo { position: relative; aspect-ratio: 3 / 2; border-bottom: 3px solid var(--deep-black); background: var(--bg-light); }
+        .mentor-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .demo-tag {
+            position: absolute; top: 14px; left: 14px; background: var(--white); border: 2px solid var(--deep-black);
+            border-radius: 99px; padding: 4px 10px; font-size: 11px; font-weight: 900; text-transform: uppercase;
+        }
+        .mentor-body { padding: 24px 26px 26px; display: flex; flex-direction: column; flex-grow: 1; }
+        .mentor-body h3 { font-size: 32px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+        .mentor-card.pink h3 { color: var(--hot-pink); }
+        .mentor-card.green h3 { color: var(--green-dark); }
+        .mentor-card.gold h3 { color: var(--gold); }
+        .mentor-role { font-size: 13px; font-weight: 900; text-transform: uppercase; color: var(--deep-black); margin: 6px 0 14px; }
+        .mentor-body p { font-size: 15px; font-weight: 600; line-height: 1.6; color: var(--text-muted); margin-bottom: 20px; }
+        .mentor-link {
+            margin-top: auto; align-self: flex-start; font-size: 13px; font-weight: 900; color: var(--deep-black);
+            border-bottom: 3px solid var(--neon-yellow); padding-bottom: 2px; transition: 0.2s;
+        }
+        .mentor-link:hover { border-color: var(--hot-pink); }
+
+        /* 03 – Bezpieczeństwo (ciemny panel) */
+        .safety-panel {
+            background: var(--deep-black); border: 3px solid var(--deep-black); border-radius: 32px; padding: 56px;
+            box-shadow: 12px 12px 0px var(--hot-pink); display: grid; grid-template-columns: 5fr 7fr; gap: 50px; align-items: start;
+        }
+        .safety-panel .section-tag { background: var(--neon-yellow); color: var(--deep-black); }
+        .safety-panel h2 {
+            font-size: clamp(36px, 5vw, 60px); font-weight: 900; text-transform: uppercase; line-height: 0.98;
+            letter-spacing: -2px; color: var(--white); margin-bottom: 22px;
+        }
+        .safety-panel h2 span { color: var(--neon-yellow); }
+        .safety-intro { font-size: 17px; font-weight: 600; line-height: 1.6; color: #A1A1AA; margin-bottom: 30px; }
+        .btn-rules {
+            background: var(--neon-yellow); color: var(--deep-black); border: 3px solid var(--deep-black); border-radius: 99px;
+            padding: 16px 26px; font-size: 15px; font-weight: 900; text-transform: uppercase; cursor: pointer;
+            box-shadow: 5px 5px 0px var(--hot-pink); transition: 0.2s;
+        }
+        .btn-rules:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0px var(--hot-pink); }
+        .safety-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .safety-card { background: #1C1C22; border: 2px solid; border-radius: 20px; padding: 26px; transition: 0.2s; }
+        .safety-card:hover { transform: translate(-3px, -3px); }
+        .safety-card.yellow { border-color: var(--neon-yellow); }
+        .safety-card.yellow:hover { box-shadow: 6px 6px 0px var(--neon-yellow); }
+        .safety-card.pink { border-color: var(--hot-pink); }
+        .safety-card.pink:hover { box-shadow: 6px 6px 0px var(--hot-pink); }
+        .safety-card.green { border-color: var(--green); }
+        .safety-card.green:hover { box-shadow: 6px 6px 0px var(--green); }
+        .safety-card.white { border-color: #A1A1AA; }
+        .safety-card.white:hover { box-shadow: 6px 6px 0px #A1A1AA; }
+        .safety-card .icon-tile { width: 46px; height: 46px; font-size: 21px; margin-bottom: 16px; }
+        .safety-card h3 { font-size: 18px; font-weight: 900; color: var(--white); margin-bottom: 10px; }
+        .safety-card p { font-size: 14px; font-weight: 500; line-height: 1.6; color: #A1A1AA; }
+
+        /* Okno "Zasady i ścieżka zgłoszenia" */
+        .rules-dialog {
+            border: 3px solid var(--deep-black); border-radius: var(--card-radius); padding: 0; max-width: 640px; width: calc(100% - 32px);
+            box-shadow: 10px 10px 0px var(--hot-pink); margin: auto;
+        }
+        .rules-dialog::backdrop { background: rgba(17, 17, 17, 0.6); }
+        .rules-head { background: var(--neon-yellow); border-bottom: 3px solid var(--deep-black); padding: 22px 28px; display: flex; justify-content: space-between; align-items: center; }
+        .rules-head h3 { font-size: 22px; font-weight: 900; text-transform: uppercase; }
+        .rules-close { background: var(--white); border: 2px solid var(--deep-black); border-radius: 10px; width: 38px; height: 38px; font-size: 18px; font-weight: 900; cursor: pointer; }
+        .rules-body { padding: 26px 28px 30px; }
+        .rules-body h4 { font-size: 14px; font-weight: 900; text-transform: uppercase; margin: 0 0 12px; }
+        .rules-body ol { margin: 0 0 22px 20px; display: flex; flex-direction: column; gap: 8px; font-size: 15px; font-weight: 600; line-height: 1.5; color: #3F3F46; }
+        .rules-body p { font-size: 13px; font-weight: 600; color: var(--text-muted); line-height: 1.5; }
+
+        /* 04 – FAQ */
+        .faq-layout { display: grid; grid-template-columns: 4fr 8fr; gap: 50px; align-items: start; }
+        .faq-layout .section-head { display: block; margin-bottom: 0; position: sticky; top: 120px; }
+        .faq-layout .section-head h2 { font-size: clamp(32px, 4.2vw, 52px); }
+        .faq-list { display: flex; flex-direction: column; gap: 18px; }
+        .btn-contact {
+            display: inline-block; margin-top: 28px; background: var(--hot-pink); color: var(--white); border: 3px solid var(--deep-black);
+            border-radius: 99px; padding: 14px 24px; font-size: 16px; font-weight: 900; box-shadow: 5px 5px 0px var(--deep-black); transition: 0.2s;
+        }
+        .btn-contact:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0px var(--neon-yellow); }
+        .contact-hint { margin-top: 12px; font-size: 13px; font-weight: 600; color: var(--text-muted); }
+        .faq-item {
+            background: var(--white); border: 3px solid var(--deep-black); border-radius: 20px;
+            box-shadow: 6px 6px 0px var(--deep-black); transition: box-shadow 0.2s;
+        }
+        .faq-item[open] { box-shadow: 6px 6px 0px var(--neon-yellow); }
+        .faq-item summary {
+            list-style: none; cursor: pointer; padding: 22px 26px; font-size: 18px; font-weight: 900; color: var(--deep-black);
+            display: flex; justify-content: space-between; align-items: center; gap: 16px;
+        }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after {
+            content: "+"; flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--deep-black);
+            display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; transition: 0.2s; background: var(--bg-light);
+        }
+        .faq-item[open] summary::after { content: "–"; background: var(--hot-pink); color: var(--white); }
+        .faq-item p { padding: 0 26px 24px; font-size: 15px; font-weight: 600; line-height: 1.6; color: var(--text-muted); }
+
+        @media (max-width: 900px) {
+            .info-section { padding: 0 16px; margin-bottom: 80px; }
+            .section-head { margin-bottom: 30px; gap: 16px; }
+            .need-stat { flex-direction: column; text-align: center; padding: 20px; }
+            .safety-panel { grid-template-columns: 1fr; padding: 30px 22px; gap: 30px; }
+            .safety-grid { grid-template-columns: 1fr; }
+            .faq-layout { grid-template-columns: 1fr; gap: 30px; }
+            .faq-layout .section-head { position: static; }
+            .top-nav { flex-direction: column; gap: 12px; padding: 12px 16px; }
+            .nav-menu { flex-wrap: wrap; justify-content: center; gap: 8px; }
+            .nav-btn { padding: 8px 14px; font-size: 12px; }
+            .nav-btn svg { width: 20px; height: 20px; }
+            .grid { padding: 0 16px; }
+        }
+
+        /* --- STOPKA --- */
+        .site-footer { background: var(--deep-black); color: var(--white); border-top: 5px solid var(--neon-yellow); padding: 70px 40px 34px; }
+        .footer-inner { max-width: 1200px; margin: 0 auto; }
+        .footer-top { display: grid; grid-template-columns: 5fr 7fr; gap: 60px; margin-bottom: 44px; }
+        .footer-brand h2 { font-size: 40px; font-weight: 900; text-transform: uppercase; letter-spacing: -1.5px; line-height: 1; }
+        .footer-brand h2 span { color: var(--hot-pink); }
+        .footer-tagline { font-size: 13px; font-weight: 800; text-transform: uppercase; color: var(--neon-yellow); margin: 8px 0 18px; }
+        .footer-mission { font-size: 15px; font-weight: 500; line-height: 1.6; color: #A1A1AA; margin-bottom: 24px; max-width: 420px; }
+        .footer-mail {
+            display: inline-block; background: var(--neon-yellow); color: var(--deep-black); border: 3px solid var(--deep-black);
+            border-radius: 99px; padding: 12px 22px; font-weight: 900; font-size: 15px; box-shadow: 4px 4px 0px var(--hot-pink); transition: 0.2s;
+        }
+        .footer-mail:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0px var(--hot-pink); }
+        .footer-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+        .footer-cols h3 { font-size: 13px; font-weight: 900; text-transform: uppercase; color: var(--neon-yellow); margin-bottom: 16px; letter-spacing: 0.5px; }
+        .footer-cols a { display: block; color: var(--white); font-size: 15px; font-weight: 700; margin-bottom: 12px; transition: 0.2s; }
+        .footer-cols a:hover { color: var(--hot-pink); transform: translateX(3px); }
+        .footer-safety {
+            border: 2px solid var(--hot-pink); border-radius: 16px; padding: 16px 20px; font-size: 14px; font-weight: 600;
+            line-height: 1.5; color: var(--white); margin-bottom: 30px; background: #1C1C22;
+        }
+        .footer-safety a { color: var(--neon-yellow); font-weight: 900; text-decoration: underline; }
+        .footer-bottom { border-top: 1px solid #333; padding-top: 24px; display: flex; flex-direction: column; gap: 8px; }
+        .footer-bottom p { font-size: 12px; font-weight: 500; line-height: 1.6; color: #A1A1AA; }
+        .footer-bottom b { color: var(--white); }
+        .footer-bottom a { color: #D4D4D8; text-decoration: underline; }
+        .footer-bottom a:hover { color: var(--neon-yellow); }
+
+        @media (max-width: 900px) {
+            .site-footer { padding: 50px 16px 28px; }
+            .footer-top { grid-template-columns: 1fr; gap: 36px; }
+            .footer-cols { grid-template-columns: 1fr 1fr; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="dotCanvas"></canvas>
+
+    <header class="top-nav">
+        <div class="brand">
+            <h1>Draft<span>Her</span></h1>
+            <p>Jej kariera. Jej wybór.</p>
+        </div>
+        <div class="nav-menu">
+            <a href="szkola.html" class="nav-btn"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M226.53,56.41l-96-32a8,8,0,0,0-5.06,0l-96,32A8,8,0,0,0,24,64v80a8,8,0,0,0,16,0V75.1L73.59,86.29a64,64,0,0,0,20.65,88.05c-18,7.06-33.56,19.83-44.94,37.29a8,8,0,1,0,13.4,8.74C77.77,197.25,101.57,184,128,184s50.23,13.25,65.3,36.37a8,8,0,0,0,13.4-8.74c-11.38-17.46-27-30.23-44.94-37.29a64,64,0,0,0,20.65-88l44.12-14.7a8,8,0,0,0,0-15.18ZM176,120A48,48,0,1,1,89.35,91.55l36.12,12a8,8,0,0,0,5.06,0l36.12-12A47.89,47.89,0,0,1,176,120ZM128,87.57,57.3,64,128,40.43,198.7,64Z"></path></svg>| DLA SZKÓŁ</a>
+            <a href="index.html" class="nav-btn active"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M220.17,100,202.86,70a28,28,0,0,0-38.24-10.25,27.69,27.69,0,0,0-9,8.34L138.2,38a28,28,0,0,0-48.48,0A28,28,0,0,0,48.15,74l1.59,2.76A27.67,27.67,0,0,0,38,80.41a28,28,0,0,0-10.24,38.25l40,69.32a87.47,87.47,0,0,0,53.43,41,88.56,88.56,0,0,0,22.92,3,88,88,0,0,0,76.06-132Zm-6.66,62.64A72,72,0,0,1,81.62,180l-40-69.32a12,12,0,0,1,20.78-12L81.63,132a8,8,0,1,0,13.85-8L62,66A12,12,0,1,1,82.78,54L114,108a8,8,0,1,0,13.85-8L103.57,58h0a12,12,0,1,1,20.78-12l33.42,57.9a48,48,0,0,0-5.54,60.6,8,8,0,0,0,13.24-9A32,32,0,0,1,172.78,112a8,8,0,0,0,2.13-10.4L168.23,90A12,12,0,1,1,189,78l17.31,30A71.56,71.56,0,0,1,213.51,162.62ZM184.25,31.71A8,8,0,0,1,194,26a59.62,59.62,0,0,1,36.53,28l.33.57a8,8,0,1,1-13.85,8l-.33-.57a43.67,43.67,0,0,0-26.8-20.5A8,8,0,0,1,184.25,31.71ZM80.89,237a8,8,0,0,1-11.23,1.33A119.56,119.56,0,0,1,40.06,204a8,8,0,0,1,13.86-8,103.67,103.67,0,0,0,25.64,29.72A8,8,0,0,1,80.89,237Z"></path></svg>| STRONA GŁÓWNA</a>
+            <a class="nav-btn" href="mapa.html?view=map"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm88,104a87.62,87.62,0,0,1-6.4,32.94l-44.7-27.49a15.92,15.92,0,0,0-6.24-2.23l-22.82-3.08a16.11,16.11,0,0,0-16,7.86h-8.72l-3.8-7.86a15.91,15.91,0,0,0-11-8.67l-8-1.73L96.14,104h16.71a16.06,16.06,0,0,0,7.73-2l12.25-6.76a16.62,16.62,0,0,0,3-2.14l26.91-24.34A15.93,15.93,0,0,0,166,49.1l-.36-.65A88.11,88.11,0,0,1,216,128ZM143.31,41.34,152,56.9,125.09,81.24,112.85,88H96.14a16,16,0,0,0-13.88,8l-8.73,15.23L63.38,84.19,74.32,58.32a87.87,87.87,0,0,1,69-17ZM40,128a87.53,87.53,0,0,1,8.54-37.8l11.34,30.27a16,16,0,0,0,11.62,10l21.43,4.61L96.74,143a16.09,16.09,0,0,0,14.4,9h1.48l-7.23,16.23a16,16,0,0,0,2.86,17.37l.14.14L128,205.94l-1.94,10A88.11,88.11,0,0,1,40,128Zm102.58,86.78,1.13-5.81a16.09,16.09,0,0,0-4-13.9,1.85,1.85,0,0,1-.14-.14L120,174.74,133.7,144l22.82,3.08,45.72,28.12A88.18,88.18,0,0,1,142.58,214.78Z"></path></svg>| MAPA OFERT</a>
+            <a class="nav-btn" href="mapa.html?view=profile"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M168,104H88a40,40,0,0,0-40,40v8a40,40,0,0,0,40,40h80a40,40,0,0,0,40-40v-8A40,40,0,0,0,168,104Zm24,48a24,24,0,0,1-24,24H88a24,24,0,0,1-24-24v-8a24,24,0,0,1,24-24h80a24,24,0,0,1,24,24ZM208,40a32.06,32.06,0,0,0-31,24H79a32,32,0,0,0-63,8v80a72.08,72.08,0,0,0,72,72h80a72.08,72.08,0,0,0,72-72V72A32,32,0,0,0,208,40Zm16,112a56.06,56.06,0,0,1-56,56H88a56.06,56.06,0,0,1-56-56V72a16,16,0,0,1,32,0,8,8,0,0,0,8,8H184a8,8,0,0,0,8-8,16,16,0,0,1,32,0Zm-120-4a12,12,0,1,1-12-12A12,12,0,0,1,104,148Zm72,0a12,12,0,1,1-12-12A12,12,0,0,1,176,148Z"></path></svg>| TWÓJ PROFIL</a>
+        </div>
+    </header>
+
+    <main class="hero">
+        <h1>Zobacz, kim możesz zostać<br><span>bez stereotypów</span></h1>
+        <p>Jednodniowe wizyty u pracodawców z mentorką u boku. Sprawdź na własne oczy, że IT, inżynieria czy logistyka to też Twoje miejsce.</p>
+        <a href="mapa.html?view=map" class="btn-start">Zacznij Teraz <span style="display: flex;"><svg xmlns="http://www.w3.org/2000/svg"  width="32" height="32" fill="yellow" viewBox="0 0 256 256"><path d="M239.35,70.08a13.41,13.41,0,0,0-11.77-9.28l-36.94-2.92L176.43,24.22a13.51,13.51,0,0,0-24.86,0L137.36,57.88,100.42,60.8a13.39,13.39,0,0,0-7.66,23.58l28.06,23.68-8.56,35.39a13.32,13.32,0,0,0,5.1,13.91,13.51,13.51,0,0,0,15,.69L164,139l31.65,19.06a13.54,13.54,0,0,0,15-.69,13.34,13.34,0,0,0,5.09-13.91l-8.56-35.39,28.06-23.68A13.32,13.32,0,0,0,239.35,70.08ZM193.08,99a8,8,0,0,0-2.61,8l8.28,34.21L168.13,122.8a8,8,0,0,0-8.25,0l-30.62,18.43L137.54,107a8,8,0,0,0-2.62-8L108,76.26l35.52-2.81a8,8,0,0,0,6.74-4.87L164,35.91l13.79,32.67a8,8,0,0,0,6.74,4.87l35.53,2.81Zm-105,24.18L29.66,181.66a8,8,0,0,1-11.32-11.32l58.45-58.45a8,8,0,0,1,11.32,11.32Zm10.81,49.87a8,8,0,0,1,0,11.31L45.66,237.66a8,8,0,0,1-11.32-11.32l53.27-53.26A8,8,0,0,1,98.92,173.08Zm73-1a8,8,0,0,1,0,11.32l-54.28,54.28a8,8,0,0,1-11.32-11.32l54.29-54.28A8,8,0,0,1,171.94,172.06Z"></path></svg></span></a>
+    </main>
+
+    <section class="grid">
+        <div class="card">
+            <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M251.76,88.94l-120-64a8,8,0,0,0-7.52,0l-120,64a8,8,0,0,0,0,14.12L32,117.87v48.42a15.91,15.91,0,0,0,4.06,10.65C49.16,191.53,78.51,216,128,216a130,130,0,0,0,48-8.76V240a8,8,0,0,0,16,0V199.51a115.63,115.63,0,0,0,27.94-22.57A15.91,15.91,0,0,0,224,166.29V117.87l27.76-14.81a8,8,0,0,0,0-14.12ZM128,200c-43.27,0-68.72-21.14-80-33.71V126.4l76.24,40.66a8,8,0,0,0,7.52,0L176,143.47v46.34C163.4,195.69,147.52,200,128,200Zm80-33.75a97.83,97.83,0,0,1-16,14.25V134.93l16-8.53ZM188,118.94l-.22-.13-56-29.87a8,8,0,0,0-7.52,14.12L171,128l-43,22.93L25,96,128,41.07,231,96Z"></path></svg></div>
+            <h3>Dla Uczennic</h3>
+            <p>Nie wiesz, czy programowanie, mechanika albo medycyna są dla Ciebie? Spędź dzień z kobietą, która już tam pracuje, i zdecyduj sama.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M216,96A88,88,0,1,0,72,163.83V240a8,8,0,0,0,11.58,7.16L128,225l44.43,22.21A8.07,8.07,0,0,0,176,248a8,8,0,0,0,8-8V163.83A87.85,87.85,0,0,0,216,96ZM56,96a72,72,0,1,1,72,72A72.08,72.08,0,0,1,56,96ZM168,227.06l-36.43-18.21a8,8,0,0,0-7.16,0L88,227.06V174.37a87.89,87.89,0,0,0,80,0ZM128,152A56,56,0,1,0,72,96,56.06,56.06,0,0,0,128,152Zm0-96A40,40,0,1,1,88,96,40,40,0,0,1,128,56Z"></path></svg></div>
+            <h3>Questy i Odznaki</h3>
+            <p>Podczas wizyty wykonujesz questy, zdobywasz XP i odznaki. Budujesz pewność siebie i portfolio, które pokażesz na rekrutacji.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M216,56H176V48a24,24,0,0,0-24-24H104A24,24,0,0,0,80,48v8H40A16,16,0,0,0,24,72V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V72A16,16,0,0,0,216,56ZM96,48a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96ZM216,72v41.61A184,184,0,0,1,128,136a184.07,184.07,0,0,1-88-22.38V72Zm0,128H40V131.64A200.19,200.19,0,0,0,128,152a200.25,200.25,0,0,0,88-20.37V200ZM104,112a8,8,0,0,1,8-8h32a8,8,0,0,1,0,16H112A8,8,0,0,1,104,112Z"></path></svg></div>
+            <h3>Dla Firm</h3>
+            <p>Pokaż, że Twoja firma jest otwarta na kobiety. Wyznacz mentorkę, przyjmij uczennice i buduj zespół bardziej różnorodny niż dziś.</p>
+            <div class="card-links">
+                <a href="company-panel.html" class="card-link">Dodaj ofertę →</a>
+                <a href="pracodawca.html" class="card-link">Panel mentorki →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 01 – POTRZEBA I HIPOTEZA -->
+    <section class="info-section" id="potrzeba">
+        <div class="section-head">
+            <div>
+                <span class="section-tag">01 / Otwieramy drzwi, nie stawiamy wymagań</span>
+                <h2>Jesteś na początku.<br>Nie <span>na straconej.</span></h2>
+            </div>
+            <p>Dla uczennic, studentek i młodych kobiet, które szukają pierwszej ścieżki lub chcą sprawdzić nowy kierunek.</p>
+        </div>
+
+        <div class="need-stat">
+            <strong>&lt; 1 na 5</strong>
+            <p>specjalistów IT w Unii Europejskiej to kobiety <small>(źródło: Eurostat)</small></p>
+        </div>
+
+        <div class="need-grid">
+            <div class="need-card pink">
+                <div class="icon-tile tile-pink">🚪</div>
+                <h3>Brak pierwszej szansy</h3>
+                <p>Trudno zdobyć doświadczenie, gdy na wejściu trzeba już je mieć.</p>
+                <span class="pill">Krótkie doświadczenia bez gotowego CV.</span>
+            </div>
+            <div class="need-card green">
+                <div class="icon-tile tile-green">🧭</div>
+                <h3>Brak kontaktów</h3>
+                <p>Nie każda ma kogo zapytać, jak naprawdę wygląda dana praca.</p>
+                <span class="pill">Jasna droga do organizacji i mentorek.</span>
+            </div>
+            <div class="need-card yellow">
+                <div class="icon-tile tile-yellow">👁️</div>
+                <h3>Za mało wzorców</h3>
+                <p>Łatwiej zobaczyć siebie w branży, kiedy spotkasz kobietę, która już w niej działa.</p>
+                <span class="pill">Różne profesje. Realna perspektywa.</span>
+            </div>
+        </div>
+
+        <div class="hypothesis">
+            <b>Nasza hipoteza:</b> małe, dostępne doświadczenia i kontakt z mentorką mogą ułatwić świadomy wybór ścieżki. Chcemy sprawdzić ją w pilotażu — nie jest jeszcze potwierdzona badaniami.
+        </div>
+    </section>
+
+    <!-- 02 – WSPARCIE MENTOREK -->
+    <section class="info-section" id="mentorki">
+        <div class="section-head">
+            <div>
+                <span class="section-tag">02 / Nie musisz ogarniać tego sama</span>
+                <h2>Ktoś już tam jest.<br><span>I może Ci pomóc.</span></h2>
+            </div>
+            <p>Mentorka nie wybiera za Ciebie. Pokazuje codzienność zawodu, odpowiada na pytania i pomaga zobaczyć postęp.</p>
+        </div>
+
+        <div class="mentor-grid">
+            <article class="mentor-card pink">
+                <div class="mentor-photo">
+                    <img src="img/mentorki/maja.jpg" alt="Maja, programistka, przy laptopie w biurze" loading="lazy">
+                    <span class="demo-tag">Profil demo</span>
+                </div>
+                <div class="mentor-body">
+                    <h3>Maja</h3>
+                    <div class="mentor-role">Programistka</div>
+                    <p>Jak wygląda pierwszy code review? Od pytania do wspólnego rozwiązania.</p>
+                    <a href="mapa.html?view=map" class="mentor-link">Rozmowa po zadaniu + pisemny feedback ↗</a>
+                </div>
+            </article>
+            <article class="mentor-card green">
+                <div class="mentor-photo">
+                    <img src="img/mentorki/klara.jpg" alt="Klara, inżynierka robotyki, przy ramieniu robota w laboratorium" loading="lazy">
+                    <span class="demo-tag">Profil demo</span>
+                </div>
+                <div class="mentor-body">
+                    <h3>Klara</h3>
+                    <div class="mentor-role">Inżynierka robotyki</div>
+                    <p>Od modelu do testu. Co robić, kiedy prototyp nie działa od razu?</p>
+                    <a href="mapa.html?view=map" class="mentor-link">Rozmowa po zadaniu + pisemny feedback ↗</a>
+                </div>
+            </article>
+            <article class="mentor-card gold">
+                <div class="mentor-photo">
+                    <img src="img/mentorki/nadia.jpg" alt="Nadia, urbanistka, przy makiecie osiedla" loading="lazy">
+                    <span class="demo-tag">Profil demo</span>
+                </div>
+                <div class="mentor-body">
+                    <h3>Nadia</h3>
+                    <div class="mentor-role">Urbanistka</div>
+                    <p>Miasto z perspektywy ludzi. Jak połączyć analizę, teren i projektowanie?</p>
+                    <a href="mapa.html?view=map" class="mentor-link">Rozmowa po zadaniu + pisemny feedback ↗</a>
+                </div>
+            </article>
+        </div>
+
+        <p class="section-note">Imiona, profile i fotografie są koncepcyjne. Nie przedstawiają rzeczywistych mentorek, rekomendacji ani potwierdzonej współpracy.</p>
+    </section>
+
+    <!-- 03 – BEZPIECZEŃSTWO I KONTROLA -->
+    <section class="info-section" id="bezpieczenstwo">
+        <div class="safety-panel">
+            <div>
+                <span class="section-tag">03 / Najpierw bezpieczeństwo</span>
+                <h2>Odwaga tak.<br><span>Presja nie.</span></h2>
+                <p class="safety-intro">Możliwości mają poszerzać Twój świat, nie odbierać Ci kontroli. Tak projektujemy zasady przyszłego pilotażu.</p>
+                <button type="button" class="btn-rules" onclick="document.getElementById('rules-dialog').showModal()">Zasady i ścieżka zgłoszenia ↗</button>
+            </div>
+            <div class="safety-grid">
+                <div class="safety-card yellow">
+                    <div class="icon-tile tile-yellow">✅</div>
+                    <h3>Sprawdzamy organizatorów</h3>
+                    <p>Projektujemy weryfikację tożsamości, osoby kontaktowej, miejsca i planu doświadczenia przed publikacją.</p>
+                </div>
+                <div class="safety-card pink">
+                    <div class="icon-tile tile-pink">🛡️</div>
+                    <h3>Możesz zgłosić sytuację</h3>
+                    <p>Widoczna ścieżka zgłoszenia, kontakt z zespołem i możliwość przerwania udziału bez tłumaczenia się.</p>
+                </div>
+                <div class="safety-card green">
+                    <div class="icon-tile tile-green">👥</div>
+                    <h3>Niepełnoletnia? Z opiekunem.</h3>
+                    <p>Kontakt do opiekuna, jego zgoda i jasne zasady udziału ustalone przed doświadczeniem.</p>
+                </div>
+                <div class="safety-card white">
+                    <div class="icon-tile tile-white">🔒</div>
+                    <h3>Twoje dane, Twoja decyzja</h3>
+                    <p>Portfolio domyślnie prywatne. Bez dokładnej prywatnej lokalizacji na mapie. Kontrola udostępniania i usuwania danych.</p>
+                </div>
+            </div>
+        </div>
+
+        <dialog class="rules-dialog" id="rules-dialog">
+            <div class="rules-head">
+                <h3>🛡️ Zasady i ścieżka zgłoszenia</h3>
+                <button type="button" class="rules-close" aria-label="Zamknij" onclick="this.closest('dialog').close()">✕</button>
+            </div>
+            <div class="rules-body">
+                <h4>Zasady udziału</h4>
+                <ol>
+                    <li>Każde doświadczenie ma opisane wymagania, plan dnia i osobę kontaktową przed zapisem.</li>
+                    <li>Osoby niepełnoletnie biorą udział wyłącznie za zgodą rodzica lub opiekuna prawnego.</li>
+                    <li>Na miejscu opiekuje się Tobą przypisana mentorka – nie zostajesz sama z osobami spoza programu.</li>
+                    <li>Możesz przerwać udział w dowolnym momencie, bez podawania powodu.</li>
+                </ol>
+                <h4>Jeśli coś jest nie tak</h4>
+                <ol>
+                    <li>Przerwij udział i odejdź w bezpieczne miejsce – nie musisz się tłumaczyć.</li>
+                    <li>Zgłoś sytuację zespołowi DraftHer przez profil lub kontakt podany w potwierdzeniu zapisu.</li>
+                    <li>Zespół kontaktuje się z Tobą (i z opiekunem, jeśli jesteś niepełnoletnia) i wstrzymuje oferty organizatora do czasu wyjaśnienia.</li>
+                </ol>
+                <p>To projekt zasad przyszłego pilotażu – w wersji demonstracyjnej zgłoszenia nie są jeszcze nigdzie wysyłane.</p>
+            </div>
+        </dialog>
+    </section>
+
+    <!-- 04 – PYTANIA PRZED STARTEM -->
+    <section class="info-section" id="faq">
+        <div class="faq-layout">
+            <div class="section-head">
+                <span class="section-tag">04 / Jeszcze coś Cię nurtuje?</span>
+                <h2>Sprawdź, czy ktoś je zadał <span>lub skontaktuj się z nami.</span></h2>
+                <a href="mailto:kontakt@drafther.pl?subject=Pytanie%20do%20DraftHer" class="btn-contact">✉️ kontakt@drafther.pl</a>
+                <p class="contact-hint">Odpowiadamy w ciągu 2 dni roboczych.</p>
+            </div>
+            <div class="faq-list">
+                <details class="faq-item" open>
+                    <summary>Czy muszę mieć doświadczenie albo CV?</summary>
+                    <p>Nie na start. Szukaj oznaczenia „bez doświadczenia”. Każda okazja ma opisywać wymagania, plan i to, z czym wyjdziesz.</p>
+                </details>
+                <details class="faq-item">
+                    <summary>Job shadowing czy mini-zadanie – jaka jest różnica?</summary>
+                    <p>W obserwacji towarzyszysz osobie przy pracy i pytasz o jej codzienność. W mini-zadaniu tworzysz mały materiał edukacyjny i dostajesz feedback.</p>
+                </details>
+                <details class="faq-item">
+                    <summary>Czy udział będzie bezpłatny?</summary>
+                    <p>Model pilotażu jest w przygotowaniu. Ewentualne koszty, transport i zakres wsparcia mają być jasno podane przed zgłoszeniem – bez ukrytych opłat.</p>
+                </details>
+                <details class="faq-item">
+                    <summary>A jeśli potrzebuję dostępnego miejsca lub elastycznych godzin?</summary>
+                    <p>Wskaż swoje potrzeby i filtruj po formacie oraz dostępności. Warunki miejsca i wsparcia potwierdzasz z organizatorem przed udziałem.</p>
+                </details>
+                <details class="faq-item">
+                    <summary>Czy DraftHer już działa?</summary>
+                    <p>To koncepcja odpowiedzi na ImpactHer. Mapa, oferty, mentorki i portfolio na stronie są przykładami. Kolejny krok to walidacja potrzeby i bezpieczny pilotaż.</p>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <!-- STOPKA -->
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <div class="footer-top">
+                <div class="footer-brand">
+                    <h2>Draft<span>Her</span></h2>
+                    <p class="footer-tagline">Jej kariera. Jej wybór.</p>
+                    <p class="footer-mission">Krótkie doświadczenia zawodowe z mentorką u boku – dla uczennic, studentek i młodych kobiet, które chcą sprawdzić swoją ścieżkę bez presji i bez gotowego CV.</p>
+                    <a href="mailto:kontakt@drafther.pl" class="footer-mail">✉️ kontakt@drafther.pl</a>
+                </div>
+                <nav class="footer-cols" aria-label="Stopka">
+                    <div>
+                        <h3>Dla uczennic</h3>
+                        <a href="mapa.html?view=map">Mapa ofert</a>
+                        <a href="mapa.html?view=profile">Profil, questy i odznaki</a>
+                        <a href="index.html#mentorki">Mentorki</a>
+                    </div>
+                    <div>
+                        <h3>Dla organizacji</h3>
+                        <a href="company-panel.html">Dodaj ofertę</a>
+                        <a href="pracodawca.html">Panel mentorki</a>
+                        <a href="szkola.html">Dla szkół</a>
+                    </div>
+                    <div>
+                        <h3>Projekt</h3>
+                        <a href="index.html#potrzeba">Potrzeba i hipoteza</a>
+                        <a href="index.html#bezpieczenstwo">Bezpieczeństwo i zgłoszenia</a>
+                        <a href="index.html#faq">Pytania przed startem</a>
+                    </div>
+                </nav>
+            </div>
+
+            <div class="footer-safety">
+                🛡️ Coś jest nie tak podczas doświadczenia? Możesz przerwać udział w każdej chwili, bez tłumaczenia się, i napisać do nas: <a href="mailto:kontakt@drafther.pl?subject=Zg%C5%82oszenie%20sytuacji">kontakt@drafther.pl</a>
+            </div>
+
+            <div class="footer-bottom">
+                <p>© 2026 DraftHer · Projekt koncepcyjny na HackYeah – zadanie <b>ImpactHer: Technology for Real Change</b>.</p>
+                <p>Oferty, firmy, mentorki, zdjęcia i dane kontaktowe na stronie są przykładowe i nie przedstawiają rzeczywistej współpracy.</p>
+                <p>Wykorzystane zasoby: <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a> · mapy © Esri, © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · ikony <a href="https://phosphoricons.com" target="_blank" rel="noopener">Phosphor Icons</a> · font Inter (Google Fonts) · dane: Eurostat. Przy tworzeniu projektu korzystano z narzędzi AI.</p>
+            </div>
+        </div>
+    </footer>
+
+<script>
+    const canvas = document.getElementById('dotCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let dots = [];
+    // Mouse.x i y startują jako undefined, żeby kropki nie uciekały przed lewym górnym rogiem na starcie
+    const mouse = { x: undefined, y: undefined, radius: 140 }; 
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        initDots();
+    }
+
+    // Śledzenie myszy względem okna (viewportu)
+    window.addEventListener('mousemove', (e) => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+    });
+
+    // Reset pozycji myszy po wyjechaniu z okna
+    // mouseout bąbelkuje z każdego elementu, więc reagujemy tylko gdy kursor faktycznie opuścił okno
+    document.addEventListener('mouseout', (e) => {
+        if (!e.relatedTarget) {
+            mouse.x = undefined;
+            mouse.y = undefined;
+        }
+    });
+
+    window.addEventListener('resize', resize);
+
+    class Dot {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.baseX = x;
+            this.baseY = y;
+            this.size = 2.5;
+            this.density = (Math.random() * 15) + 5;
+            this.distanceFromMouse = Infinity;
+        }
+
+        draw() {
+            let opacity = 0;
+            if (this.distanceFromMouse < mouse.radius) {
+                opacity = 1 - (this.distanceFromMouse / mouse.radius);
+            }
+
+            // KOLORYSTYKA DRAFTHER:
+            // Bazowy: Jasny szary (#D4D4D8)
+            // Aktywny: Hot Pink (#FF0066 -> HSL: 336, 100%, 50%)
+            const hue = 336; 
+            const saturation = opacity * 100;
+            const lightness = 85 - (opacity * 35); 
+            
+            ctx.fillStyle = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+            
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size + (opacity * 3.5), 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        update() {
+            if (mouse.x === undefined) {
+                this.distanceFromMouse = Infinity;
+            } else {
+                let dx = mouse.x - this.x;
+                let dy = mouse.y - this.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                this.distanceFromMouse = distance;
+
+                if (distance < mouse.radius) {
+                    let forceDirectionX = dx / distance;
+                    let forceDirectionY = dy / distance;
+                    let force = (mouse.radius - distance) / mouse.radius;
+                    let directionX = forceDirectionX * force * this.density;
+                    let directionY = forceDirectionY * force * this.density;
+
+                    this.x -= directionX;
+                    this.y -= directionY;
+                }
+            }
+
+            // Powrót do pozycji bazowej
+            if (this.x !== this.baseX) {
+                this.x -= (this.x - this.baseX) / 10;
+            }
+            if (this.y !== this.baseY) {
+                this.y -= (this.y - this.baseY) / 10;
+            }
+        }
+    }
+
+    function initDots() {
+        dots = [];
+        const spacing = 25; // Nieco rzadsze kropki dla lepszej czytelności tła
+        for (let y = 0; y < canvas.height; y += spacing) {
+            for (let x = 0; x < canvas.width; x += spacing) {
+                dots.push(new Dot(x, y));
+            }
+        }
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < dots.length; i++) {
+            dots[i].update();
+            dots[i].draw();
+        }
+        requestAnimationFrame(animate);
+    }
+
+    resize();
+    animate();
+</script>
+</body>
+</html>
